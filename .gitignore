@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Environment files
+.env
+*.env
+.env.*
+!/.env.example
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database / backups
+backups/
+*.sqlite3
+
+# ML model artifacts
+*.joblib
+*.pkl
+*.h5
+*.model
+
+# IDE/editor
+.vscode/
+.idea/
