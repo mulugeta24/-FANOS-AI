@@ -1,0 +1,36 @@
+FROM python:3.11-slim
+
+LABEL maintainer="FANOS AI Platform"
+LABEL description="FANOS WAF Log Collector Service"
+
+# Install Docker CLI (to access docker logs command)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    docker.io \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy WAF collector application
+COPY app/ /app/
+
+# Make startup script executable
+RUN chmod +x /app/start_collector.sh
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV LOG_LEVEL=INFO
+ENV BACKEND_URL=http://backend:8000
+ENV WAF_CONTAINER=fanos-waf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)"
+
+# Run the collector service
+CMD ["/bin/bash", "/app/start_collector.sh"]

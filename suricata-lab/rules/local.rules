@@ -1,0 +1,4 @@
+alert icmp any any -> any any (msg:"FANOS Lab ICMP detection"; itype:8; sid:1000001; rev:1;)
+alert tcp any any -> any 8080 (msg:"FANOS Lab HTTP test traffic"; flow:to_server; flags:S; sid:1000002; rev:1;)
+alert http any any -> any any (msg:"FANOS LAB HTTP TEST ALERT"; http.uri; content:"fanos-suricata-test"; sid:1000003; rev:1;)
+alert tcp any any -> $HOME_NET any (msg:"FANOS LAB NMAP SYN SCAN"; flags:S; flow:to_server; threshold:type both,track by_src,count 1,seconds 60; sid:1000004; rev:1;)

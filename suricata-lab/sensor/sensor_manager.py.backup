@@ -1,0 +1,97 @@
+﻿from pathlib import Path
+import platform
+import subprocess
+import sys
+import time
+
+SENSOR_ROOT = Path(__file__).resolve().parent
+LAB_ROOT = SENSOR_ROOT.parent
+
+SURICATA_EXE = Path(r"C:\Program Files\Suricata\suricata.exe")
+SURICATA_CONFIG = Path(r"C:\Program Files\Suricata\suricata.yaml")
+SURICATA_EVE = Path(r"C:\Program Files\Suricata\log\eve.json")
+
+CAPTURE_INTERFACE = "192.168.56.1"
+
+
+def main():
+    print("=" * 60)
+    print("FANOS SENSOR MANAGER")
+    print("=" * 60)
+
+    print(f"Platform          : {platform.system()} {platform.release()}")
+    print(f"Python            : {sys.version.split()[0]}")
+    print(f"Sensor            : {SENSOR_ROOT}")
+    print(f"Lab Root          : {LAB_ROOT}")
+    print(f"Suricata          : {SURICATA_EXE}")
+    print(f"Suricata Config   : {SURICATA_CONFIG}")
+    print(f"EVE JSON          : {SURICATA_EVE}")
+    print(f"Capture Interface : {CAPTURE_INTERFACE}")
+
+    print("-" * 60)
+
+    if not SURICATA_EXE.exists():
+        print("ERROR: Suricata executable not found")
+        return 1
+
+    if not SURICATA_CONFIG.exists():
+        print("ERROR: Suricata configuration not found")
+        return 1
+
+    print("Suricata          : OK")
+    print("Configuration     : OK")
+    print()
+    print("Starting Suricata...")
+
+    command = [
+        str(SURICATA_EXE),
+        "-c",
+        str(SURICATA_CONFIG),
+        "-i",
+        CAPTURE_INTERFACE,
+    ]
+
+    process = subprocess.Popen(
+        command,
+        cwd=str(SURICATA_EXE.parent),
+    )
+
+    print(f"Suricata PID      : {process.pid}")
+
+    time.sleep(3)
+
+    if process.poll() is not None:
+        print(f"ERROR: Suricata stopped immediately with exit code {process.returncode}")
+        return 1
+
+    print("Suricata          : RUNNING")
+    print("Sensor Manager    : RUNNING")
+    print()
+    print("FANOS Sensor is now monitoring traffic.")
+    print("Press Ctrl+C to stop the Sensor Manager and Suricata.")
+    print("=" * 60)
+
+    try:
+        while True:
+            if process.poll() is not None:
+                print()
+                print("WARNING: Suricata stopped.")
+                print(f"Exit code         : {process.returncode}")
+                return 1
+
+            time.sleep(2)
+
+    except KeyboardInterrupt:
+        print()
+        print("Stopping FANOS Sensor...")
+
+        if process.poll() is None:
+            process.terminate()
+
+        print("Suricata          : STOPPED")
+        print("Sensor Manager    : STOPPED")
+        return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

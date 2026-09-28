@@ -1,0 +1,36 @@
+services:
+  suricata:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: fanos-suricata-lab
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - -c
+      - /etc/suricata/suricata.yaml
+      - -r
+      - /pcaps/lab.pcap
+      - -l
+      - /var/log/suricata
+      - --runmode
+      - single
+    volumes:
+      - ./config/suricata.yaml:/etc/suricata/suricata.yaml:ro
+      - ./config/classification.config:/etc/suricata/classification.config:ro
+      - ./rules:/var/lib/suricata/rules:ro
+      - ./logs:/var/log/suricata
+      - ./pcaps:/pcaps:ro
+    networks:
+      - suricata_lab
+    profiles:
+      - replay
+
+networks:
+  suricata_lab:
+    name: fanos-suricata-lab
+    driver: bridge
+    internal: true

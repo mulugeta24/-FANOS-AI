@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>FANOS WAF Test Application</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .status {
+            background: #dcfce7;
+            border-left: 5px solid #16a34a;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: #111827;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .api-box {
+            background: #111827;
+            color: #d1fae5;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>FANOS WAF Test Application</h1>
+    <p>Controlled Web Application Security Testing Environment</p>
+</header>
+
+<div class="container">
+
+    <div class="status">
+        <strong>&#10003; Application Online</strong><br>
+        Request successfully reached the test application.
+    </div>
+
+    <div class="grid">
+
+        <!-- Login -->
+        <div class="card">
+            <h2>&#128274; Login</h2>
+
+            <form method="POST" action="/login">
+
+                <label>Username</label>
+                <input
+                    type="text"
+                    name="username"
+                    placeholder="Enter username"
+                >
+
+                <label>Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter password"
+                >
+
+                <button type="submit">
+                    Login
+                </button>
+
+            </form>
+        </div>
+
+        <!-- Search -->
+        <div class="card">
+            <h2>&#128270; Search</h2>
+
+            <form method="GET" action="/search">
+
+                <label>Search Query</label>
+
+                <input
+                    type="text"
+                    name="q"
+                    placeholder="Search..."
+                >
+
+                <button type="submit">
+                    Search
+                </button>
+
+            </form>
+        </div>
+
+        <!-- User Profile -->
+        <div class="card">
+            <h2>&#128100; User Profile</h2>
+
+            <form method="GET" action="/profile">
+
+                <label>User ID</label>
+
+                <input
+                    type="text"
+                    name="id"
+                    placeholder="Example: 1001"
+                >
+
+                <button type="submit">
+                    View Profile
+                </button>
+
+            </form>
+        </div>
+
+        <!-- API -->
+        <div class="card">
+            <h2>&#128268; API Test</h2>
+
+            <p>Example API endpoint:</p>
+
+            <div class="api-box">
+                GET /api/users?id=1001
+            </div>
+
+            <br>
+
+            <button onclick="callAPI()">
+                Test API
+            </button>
+        </div>
+
+        <!-- Request Body -->
+        <div class="card">
+            <h2>&#128232; Request Test</h2>
+
+            <form method="POST" action="/submit">
+
+                <label>Message</label>
+
+                <textarea
+                    name="message"
+                    rows="5"
+                    placeholder="Enter request data..."
+                ></textarea>
+
+                <button type="submit">
+                    Submit Request
+                </button>
+
+            </form>
+        </div>
+
+        <!-- File Upload -->
+        <div class="card">
+            <h2>&#128193; File Upload</h2>
+
+            <form
+                method="POST"
+                action="/upload"
+                enctype="multipart/form-data"
+            >
+
+                <label>Select File</label>
+
+                <input
+                    type="file"
+                    name="file"
+                >
+
+                <button type="submit">
+                    Upload
+                </button>
+
+            </form>
+        </div>
+
+    </div>
+
+    <br>
+
+    <!-- WAF Testing Information -->
+    <div class="card">
+
+        <h2>&#128737;&#65039; FANOS WAF Protection</h2>
+
+        <p>
+            This application is designed as a controlled target
+            for testing the FANOS Web Application Firewall.
+        </p>
+
+        <ul>
+            <li>HTTP request inspection</li>
+            <li>SQL injection detection</li>
+            <li>XSS detection</li>
+            <li>Path traversal detection</li>
+            <li>Command injection detection</li>
+            <li>Request body inspection</li>
+            <li>File upload inspection</li>
+            <li>Rate-limit testing</li>
+            <li>HTTP method filtering</li>
+            <li>OWASP CRS rule testing</li>
+        </ul>
+
+    </div>
+
+</div>
+
+<footer>
+    FANOS Security Platform &mdash; WAF Testing Environment
+</footer>
+
+<script>
+async function callAPI() {
+
+    try {
+
+        const response = await fetch(
+            "/api/users?id=1001"
+        );
+
+        const data = await response.text();
+
+        alert(
+            "API Response:\n\n" + data
+        );
+
+    } catch (error) {
+
+        alert(
+            "API request failed."
+        );
+
+    }
+}
+</script>
+
+</body>
+</html>

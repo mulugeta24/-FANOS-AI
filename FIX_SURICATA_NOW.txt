@@ -1,0 +1,111 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                  FIX SURICATA AUTHENTICATION                  ║
+║                        Quick Guide                            ║
+╚═══════════════════════════════════════════════════════════════╝
+
+PROBLEM:
+--------
+✗ Sensor Control shows: "The START request failed"
+✗ Suricata page shows: "API UNAVAILABLE"
+✗ All statuses show: "UNKNOWN"
+
+ROOT CAUSE:
+-----------
+The sensor service needs an authentication token to communicate
+with the FANOS backend. Token is configured in backend but not
+in the sensor service config file.
+
+FIX (2 minutes):
+----------------
+
+STEP 1: Open PowerShell as Administrator
+   • Press Windows key
+   • Type: powershell
+   • Right-click "Windows PowerShell"
+   • Select "Run as administrator"
+   • Click "Yes" on UAC prompt
+
+STEP 2: Navigate to FANOS directory
+   cd "c:\Fanos Aii"
+
+STEP 3: Run the fix script
+   .\fix-sensor-auth.ps1
+
+   Expected output:
+   ✓ [1/4] Backing up existing config...
+   ✓ [2/4] Reading current configuration...
+   ✓ [3/4] Updating sensor token...
+   ✓ [4/4] Restarting sensor service...
+   
+   SUCCESS! Sensor authentication fixed
+   Service Status: Running
+
+STEP 4: Verify in FANOS UI
+   • Refresh the Sensor Control page (F5)
+   • You should see:
+     - Current Status: STOPPED (but connected!)
+     - Service: ONLINE (green)
+     - Suricata: OFFLINE
+     - Collector: OFFLINE
+   
+   • Click the "START" button
+   • Wait 5-10 seconds
+   • Status should change to:
+     - Desired State: RUNNING
+     - Suricata: ONLINE (green)
+     - Collector: ONLINE (green)
+
+STEP 5: Check Suricata page
+   • Navigate to: Security Operations → Network Security → Suricata
+   • Page should now show "Waiting for API" instead of "API UNAVAILABLE"
+   • Once Suricata captures traffic, alerts will appear here
+
+TROUBLESHOOTING:
+----------------
+
+If the script fails:
+   • Make sure PowerShell is running as Administrator
+   • Check: Get-Service FANOSSensorService
+   • Should show: Status = Running
+
+If status still shows UNKNOWN after fix:
+   • Wait 10 seconds (service polls every 5 seconds)
+   • Click REFRESH button on Sensor Control page
+   • Check backend logs for "200 OK" responses
+
+If START button still fails:
+   • Check backend process is running
+   • Verify: curl http://localhost:8000/health
+   • Should return: {"status":"healthy"}
+
+MANUAL VERIFICATION:
+--------------------
+
+Check sensor logs:
+   Get-Content "C:\ProgramData\FANOS\logs\sensor-service.log" -Tail 20
+
+Check backend is receiving heartbeats:
+   • Look for these log entries in backend output:
+   INFO: 127.0.0.1:xxxxx - "POST /api/v1/sensors/demo-sensor-01/heartbeat HTTP/1.1" 200 OK
+
+Check Suricata is installed:
+   Test-Path "C:\Program Files\Suricata\suricata.exe"
+   # Should return: True
+
+═══════════════════════════════════════════════════════════════
+
+WHAT HAPPENS AFTER FIX:
+-----------------------
+
+1. Sensor service connects to backend ✓
+2. Sensor Control UI shows real status ✓
+3. START button works ✓
+4. Suricata IDS starts capturing traffic ✓
+5. Collector sends alerts to backend ✓
+6. Suricata page displays real-time alerts ✓
+7. SOC dashboard shows network events ✓
+
+═══════════════════════════════════════════════════════════════
+
+Need help? Check the full documentation:
+   c:\Fanos Aii\SURICATA_FIX_INSTRUCTIONS.md

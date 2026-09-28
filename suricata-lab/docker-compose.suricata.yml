@@ -1,0 +1,4 @@
+# Canonical named entry point for the isolated FANOS Suricata lab.
+# The implementation is kept in docker-compose.yml for compatibility with the lab screenshot.
+include:
+  - path: ./docker-compose.yml

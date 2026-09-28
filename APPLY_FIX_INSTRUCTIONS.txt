@@ -1,0 +1,124 @@
+╔════════════════════════════════════════════════════════════════╗
+║           APPLY SENSOR AUTHENTICATION FIX                      ║
+║                  (2 Minutes)                                   ║
+╚════════════════════════════════════════════════════════════════╝
+
+WHAT THIS FIXES:
+----------------
+- Sensor service authentication with backend
+- Admin Portal sensor status (will show ONLINE)
+- START button functionality
+- Suricata control via UI
+- Real-time sensor monitoring
+
+═══════════════════════════════════════════════════════════════
+
+STEPS TO APPLY:
+
+1. Open PowerShell as Administrator
+   • Press Windows key
+   • Type: powershell
+   • Right-click "Windows PowerShell"
+   • Click "Run as administrator"
+   • Click "Yes" on UAC prompt
+
+2. Run these commands:
+   
+   cd "c:\Fanos Aii"
+   .\apply-sensor-token-fix.ps1
+
+3. Wait for completion (5-10 seconds)
+
+═══════════════════════════════════════════════════════════════
+
+EXPECTED OUTPUT:
+
+[1/6] Retrieving backend token from configuration...
+      Backend token retrieved (value not displayed)
+      
+[2/6] Backing up existing sensor configuration...
+      Backup created: sensor-service.env.backup-YYYYMMDD-HHMMSS
+      
+[3/6] Updating sensor configuration...
+      Configuration key updated: FANOS_SENSOR_TOKEN
+      
+[4/6] Restarting FANOSSensorService...
+      Service restarted successfully: Running
+      
+[5/6] Waiting for service initialization...
+      
+[6/6] Verifying authentication...
+      Authentication successful!
+
+Configuration Update Complete
+
+═══════════════════════════════════════════════════════════════
+
+VERIFICATION:
+
+After the script completes:
+
+1. Go to Admin Portal > Services > Sensor Control
+2. Click REFRESH
+3. You should see:
+   - Service: ONLINE (green)
+   - Status changes from OFFLINE to actual state
+   - No more "The START request failed" error
+
+4. If sensor shows STOPPED:
+   - Click START button
+   - Wait 5-10 seconds
+   - Suricata and Collector should show ONLINE
+
+5. Check Suricata page:
+   - Navigate to: Security Operations > Network Security > Suricata
+   - Should show "Waiting for API" (not "API UNAVAILABLE")
+   - Will show alerts once traffic is captured
+
+═══════════════════════════════════════════════════════════════
+
+WHAT THE FIX DOES:
+
+✓ Reads backend token from: c:\Fanos Aii\backend\.env
+✓ Backs up: C:\ProgramData\FANOS\config\sensor-service.env
+✓ Updates ONLY the FANOS_SENSOR_TOKEN value
+✓ Preserves all other settings
+✓ Restarts FANOSSensorService
+✓ Verifies service is running
+
+WHAT IT DOES NOT DO:
+
+✗ Does NOT modify Suricata configuration
+✗ Does NOT modify any code
+✗ Does NOT change backend settings
+✗ Does NOT restart Docker
+✗ Does NOT modify database
+✗ Does NOT expose token value
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+
+If script fails:
+  → Make sure PowerShell is running as Administrator
+  → Check service exists: Get-Service FANOSSensorService
+
+If still getting 401 errors after 30 seconds:
+  → Check backend is running on port 8000
+  → Restart backend if needed
+  → Check backend logs
+
+If sensor still shows OFFLINE:
+  → Wait 30 seconds (heartbeat cycle)
+  → Click REFRESH on Sensor Control page
+  → Check sensor logs: C:\ProgramData\FANOS\logs\sensor-service.log
+
+═══════════════════════════════════════════════════════════════
+
+READY TO APPLY THE FIX?
+
+Open Administrator PowerShell and run:
+  cd "c:\Fanos Aii"
+  .\apply-sensor-token-fix.ps1
+
+═══════════════════════════════════════════════════════════════
