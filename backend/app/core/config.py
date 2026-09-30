@@ -34,9 +34,19 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
     # AI Engine
-    AI_MODEL_PATH: str = "./models/fanos_v3_xgboost.joblib"
+    AI_MODEL_PATH: str = "models/fanos_v3_xgboost_rare_improved.json"
     AI_CONFIDENCE_THRESHOLD: float = 0.75
     AI_BATCH_SIZE: int = 64
+
+    # Suricata Collector Authentication
+    SURICATA_INGEST_TOKEN: str = ""
+    
+    # Suricata Correlation Configuration
+    FANOS_SURICATA_CORRELATION_WINDOW_SECONDS: int = 300
+    FANOS_SURICATA_CORRELATION_MAX_EVENTS: int = 100
+    
+    # Deduplication Configuration
+    FANOS_DEDUP_WINDOW_SECONDS: int = 60
 
     @property
     def allowed_origins_list(self) -> List[str]:

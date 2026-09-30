@@ -1,0 +1,36 @@
+[Unit]
+Description=FANOS Suricata Collector
+Documentation=https://github.com/mulugeta24/-FANOS-AI
+After=network.target suricata.service
+Requires=suricata.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/fanos-collector
+EnvironmentFile=/etc/fanos/collector.env
+
+# Main collector process
+ExecStart=/opt/fanos-collector/venv/bin/python3 -m app.main
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitInterval=300
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fanos-collector
+
+# Security hardening (optional)
+# NoNewPrivileges=true
+# PrivateTmp=true
+# ProtectSystem=strict
+# ReadWritePaths=/var/lib/fanos
+# ReadOnlyPaths=/var/log/suricata
+
+[Install]
+WantedBy=multi-user.target

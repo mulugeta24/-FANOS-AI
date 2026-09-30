@@ -14,8 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # App source
 COPY . .
 
-# Create models directory
-RUN mkdir -p /app/models
+# Ensure the model directory exists
+RUN mkdir -p /app/models /app/app/models
+
+# Set AI_MODEL_PATH explicitly for the container (relative to /app)
+ENV AI_MODEL_PATH="models/fanos_v3_xgboost_rare_improved.json"
 
 EXPOSE 8000
 

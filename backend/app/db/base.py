@@ -34,3 +34,7 @@ async def get_db() -> AsyncSession:
         except Exception:
             await session.rollback()
             raise
+
+
+# Alias for compatibility
+get_async_session = get_db
