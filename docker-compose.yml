@@ -47,6 +47,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       APP_ENV: production
       DEBUG: "false"
+      SURICATA_INGEST_TOKEN: ${SURICATA_INGEST_TOKEN:-changeme}
     ports:
       - "8000:8000"
     depends_on:
@@ -56,6 +57,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/models:/app/models:ro
+      - ./backend/app:/app/app
     restart: unless-stopped
 
   # ── React Frontend ───────────────────────────────────────────

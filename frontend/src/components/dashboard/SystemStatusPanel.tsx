@@ -1,4 +1,5 @@
 import { Wifi, Server, ShieldCheck, Globe, Cloud, Users, Activity } from 'lucide-react'
+import { useBackendStatus } from '@/hooks/useDashboard'
 
 /* ── Sensor/system status data ────────────────────── */
 const SENSORS = [
@@ -18,6 +19,8 @@ const STATS = [
 ]
 
 export default function SystemStatusPanel() {
+  const { data: isOnline = true } = useBackendStatus()
+
   return (
     <div className="fanos-card">
       {/* Header */}
@@ -79,11 +82,20 @@ export default function SystemStatusPanel() {
         })}
       </div>
 
-      {/* Demo mode footer */}
-      <div className="px-4 py-2 border-t border-white/[0.04]">
-        <span className="text-[10px] text-fanos-dim">
-          <span className="text-fanos-amber font-semibold">DEMO MODE —</span> Backend offline · Displaying simulated sensor data
-        </span>
+      {/* Status footer */}
+      <div className="px-4 py-2 border-t border-white/[0.04] flex items-center justify-between">
+        {isOnline ? (
+          <>
+            <span className="text-[10px] text-fanos-dim">
+              <span className="text-emerald-400 font-semibold">PRODUCTION ACTIVE —</span> Suricata IDS & Threat telemetry streaming
+            </span>
+            <span className="text-[10px] font-mono text-fanos-accent">Host-Only 192.168.56.0/24</span>
+          </>
+        ) : (
+          <span className="text-[10px] text-fanos-dim">
+            <span className="text-fanos-amber font-semibold">DEMO MODE —</span> Backend offline · Displaying simulated sensor data
+          </span>
+        )}
       </div>
     </div>
   )

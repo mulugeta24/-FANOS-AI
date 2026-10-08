@@ -11,7 +11,7 @@ export default function ConnectionBanner() {
 
     async function check() {
       try {
-        await axios.get('/api/v1/dashboard/kpis', { timeout: 3000 })
+        await axios.get('/health', { timeout: 5000 })
         if (online === false) {
           setOnline(true)
           setVisible(true)

@@ -125,6 +125,7 @@ async def login(body: LoginRequest) -> TokenResponse:
     token = create_access_token(
         subject=body.username,
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        claims={"role": user.get("role", "admin"), "organization": user.get("organization")},
     )
     
     # Return token with user info

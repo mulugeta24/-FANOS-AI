@@ -43,7 +43,9 @@ export interface SecurityEvent {
   ai_confidence:  number
   risk_score:     number
   status:         EventStatus
-  timestamp:      string
+  timestamp?:     string
+  created_at?:    string
+  sensor_source?: string
 }
 
 // Incident

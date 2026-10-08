@@ -106,11 +106,41 @@ interface Props {
 }
 
 export default function LiveEventsPanelEnhanced({ onOpenIncident, onOpenIP }: Props) {
-  const { isFetching } = useLiveEvents(20)
+  const { data: rawEvents, isFetching } = useLiveEvents(20)
   const refresh = useRefreshAll()
   const [hovered, setHovered] = useState<string | null>(null)
 
-  const events = LIVE_EVENTS
+  const events = (rawEvents && rawEvents.length > 0)
+    ? rawEvents.map((ev: any, idx: number) => {
+        let timestampStr = 'Just now'
+        const rawTime = ev.created_at || ev.timestamp
+        if (rawTime) {
+          try {
+            const d = new Date(rawTime)
+            timestampStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+          } catch {
+            timestampStr = String(rawTime).slice(11, 19) || 'Just now'
+          }
+        }
+        const action = ev.status === 'BLOCKED' ? 'WAF Block' : ev.status === 'ALERT' ? 'Alert Raised' : ev.status === 'CONTAINED' ? 'Contained' : 'Monitored'
+        const asset = ev.sensor_source ? (ev.sensor_source === 'suricata' ? 'IDS / Suricata' : ev.sensor_source.toUpperCase()) : 'Network'
+        const risk = ev.risk_score || (ev.ai_confidence ? Math.round(ev.ai_confidence) : 80)
+        return {
+          id: ev.id ? `EVT-${String(ev.id).slice(0, 6)}` : `EVT-${idx + 1}`,
+          rawId: ev.id,
+          severity: ev.severity || 'INFO',
+          timestamp: timestampStr,
+          threat: ev.attack_type || ev.threat || 'Network Event',
+          sourceIp: ev.source_ip || ev.sourceIp || '192.168.56.101',
+          dest: ev.target || ev.dest || '192.168.56.1:8000',
+          asset: asset,
+          aiRisk: risk,
+          status: ev.status || 'ALERT',
+          action: action,
+          incidentId: ev.incident_id || null,
+        }
+      })
+    : LIVE_EVENTS
 
   return (
     <div className="fanos-card">

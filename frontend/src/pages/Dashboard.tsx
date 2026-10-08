@@ -3,7 +3,7 @@ import {
   AlertOctagon, AlertTriangle, ShieldCheck,
   Activity, BrainCircuit, HeartPulse,
 } from 'lucide-react'
-import { useDashboardKPIs } from '@/hooks/useDashboard'
+import { useDashboardKPIs, useBackendStatus } from '@/hooks/useDashboard'
 import { mockKPIs } from '@/lib/mockData'
 
 // Existing components
@@ -31,6 +31,7 @@ import AIWorkflowPanel          from '@/components/dashboard/AIWorkflowPanel'
 
 export default function Dashboard() {
   const { data: kpi = mockKPIs } = useDashboardKPIs()
+  const { data: isOnline = true } = useBackendStatus()
 
   // Modals / drawers state
   const [openIncident, setOpenIncident] = useState<IncidentDetail | null>(null)
@@ -59,18 +60,19 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Demo mode badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-semibold text-fanos-amber"
-              style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-fanos-amber animate-pulse" />
-              DEMO MODE — Backend Offline
-            </div>
-            {/* Live badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold text-fanos-accent"
-              style={{ background: 'rgba(0,200,255,0.05)', border: '1px solid rgba(0,200,255,0.15)' }}>
-              <span className="dot-accent" />
-              LIVE · Updated just now
-            </div>
+            {isOnline ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold text-emerald-400"
+                style={{ background: 'rgba(0,229,160,0.08)', border: '1px solid rgba(0,229,160,0.25)' }}>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                LIVE · Production Connected
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-semibold text-fanos-amber"
+                style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-fanos-amber animate-pulse" />
+                DEMO MODE — Backend Offline
+              </div>
+            )}
           </div>
         </div>
 

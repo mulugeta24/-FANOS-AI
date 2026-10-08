@@ -135,3 +135,24 @@ export function useRefreshAll() {
   const qc = useQueryClient()
   return () => qc.invalidateQueries()
 }
+
+/** Check backend connectivity via /health */
+export function useBackendStatus() {
+  return useQuery({
+    queryKey: ['system', 'backend-status'],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/health', { signal: AbortSignal.timeout(4000) })
+        if (!res.ok) return false
+        const data = await res.json()
+        return data?.status === 'healthy'
+      } catch {
+        return false
+      }
+    },
+    refetchInterval: 10_000,
+    staleTime: 5_000,
+    initialData: true,
+  })
+}
+

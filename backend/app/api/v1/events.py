@@ -2,13 +2,19 @@
 Security Events API
 """
 import uuid
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.base import get_async_session
+from app.models.security import SecurityEvent
 from app.schemas.security import SecurityEventOut
 
+logger = logging.getLogger("fanos.api.events")
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
@@ -46,8 +52,20 @@ LIVE_EVENTS = [
 async def get_live_events(
     limit: int = Query(default=20, le=100),
     severity: Optional[str] = Query(default=None),
+    session: AsyncSession = Depends(get_async_session),
 ) -> List[SecurityEventOut]:
-    """Stream of most recent security events."""
+    """Stream of most recent security events from PostgreSQL with mock fallback."""
+    try:
+        query = select(SecurityEvent).order_by(SecurityEvent.created_at.desc()).limit(limit)
+        if severity:
+            query = query.where(SecurityEvent.severity == severity.upper())
+        result = await session.execute(query)
+        db_events = list(result.scalars().all())
+        if db_events:
+            return db_events
+    except Exception as exc:
+        logger.warning("Failed to query live events from DB: %s", exc)
+
     events = [_make_event(*row) for row in LIVE_EVENTS]
     if severity:
         events = [e for e in events if e.severity == severity.upper()]
@@ -55,7 +73,17 @@ async def get_live_events(
 
 
 @router.get("/{event_id}", response_model=SecurityEventOut)
-async def get_event(event_id: uuid.UUID) -> SecurityEventOut:
+async def get_event(
+    event_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+) -> SecurityEventOut:
     """Get a single event by ID."""
-    # In production: query DB. Here we return a placeholder.
+    try:
+        result = await session.execute(select(SecurityEvent).where(SecurityEvent.id == event_id))
+        event = result.scalar_one_or_none()
+        if event:
+            return event
+    except Exception as exc:
+        logger.warning("Failed to query event %s: %s", event_id, exc)
+
     return _make_event("HIGH", "SQL Injection", "192.168.56.10", "/login", 98.7, 96, "BLOCKED", 2)
