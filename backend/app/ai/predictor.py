@@ -21,7 +21,15 @@ from typing import Any, Optional, Dict, List
 
 import numpy as np
 
-from app.ai.feature_extractor import feature_extractor, validate_feature_vector, NUM_FEATURES
+from app.ai.feature_extractor import (
+    feature_extractor,
+    validate_feature_vector,
+    NUM_FEATURES,
+    INCOMPATIBLE_FEATURES,
+    SCHEMA_VERSION_CIC_FLOWMETER,
+    SCHEMA_VERSION_SURICATA_FLOW,
+    SCHEMA_VERSION_SURICATA_ALERT_LEGACY,
+)
 from app.ai.model_loader import (
     CLASS_LABELS,
     CLASS_ID_MAPPING,
@@ -65,6 +73,13 @@ class MLPrediction:
     risk_score:         int = 0
     recommendation:     str = "Record event for baseline analysis."
     inference_ms:       float = 0.0
+    feature_schema:     str = "SURICATA_ALERT_LEGACY"
+
+    # Schema Validation & Integrity Metadata
+    is_experimental:        bool = False
+    validation_status:      str = "VALIDATED"
+    missing_features_count: int = 0
+    compatibility_warning:  Optional[str] = None
 
 
 _RECOMMENDATION_MAP = {
@@ -142,12 +157,86 @@ class FANOSPredictor:
             logger.exception("[ML] Prediction error: %s", exc)
             return self._error_result(str(exc))
 
+    def predict_flow(
+        self,
+        flow_event: dict[str, Any],
+        source_ip: Optional[str] = None,
+        target_path: Optional[str] = None,
+        rule_match=None,
+    ) -> MLPrediction:
+        """
+        Run genuine flow-based prediction pipeline for one Suricata flow record.
+        Schema: SURICATA_FLOW_DERIVED_V1
+        """
+        t_start = time.perf_counter()
+
+        if not model_loader.is_ready():
+            logger.warning("[ML] Model %s unavailable — status: %s", MODEL_NAME, model_loader.status)
+            return self._unavailable_result()
+
+        try:
+            if model_loader.has_native_model():
+                feature_vec, schema_version = feature_extractor.extract_suricata_native_flow(flow_event)
+                pred = self._run_inference(
+                    feature_vec=feature_vec,
+                    source_ip=source_ip,
+                    target_path=target_path,
+                    rule_match=rule_match,
+                    t_start=t_start,
+                )
+                pred.feature_schema = schema_version
+                pred.model_name = getattr(model_loader, "native_model_name", "SURICATA_FLOW_NATIVE_V1")
+                pred.model_version = getattr(model_loader, "native_model_version", "FANOS_V3_NATIVE")
+                pred.num_features = len(feature_vec)
+                pred.feature_count = len(feature_vec)
+                pred.is_experimental = False
+                pred.validation_status = "VALIDATED"
+                pred.missing_features_count = 0
+                pred.compatibility_warning = None
+                if pred.is_malicious:
+                    pred.recommendation = f"ML Flow Detection ({pred.prediction}): Isolate/inspect flow from {source_ip or 'source'}."
+                else:
+                    pred.recommendation = "Normal bidirectional network flow recorded."
+                return pred
+
+            feature_vec, schema_version = feature_extractor.extract_from_suricata_flow(flow_event)
+            pred = self._run_inference(
+                feature_vec=feature_vec,
+                source_ip=source_ip,
+                target_path=target_path,
+                rule_match=rule_match,
+                t_start=t_start,
+            )
+            pred.feature_schema = schema_version
+            pred.is_experimental = True
+            pred.validation_status = "EXPERIMENTAL_UNVALIDATED_APPROXIMATION"
+            pred.missing_features_count = len(INCOMPATIBLE_FEATURES)
+            pred.compatibility_warning = (
+                "Suricata EVE summary flow telemetry cannot provide packet variance, "
+                "extrema, TCP initial window sizes, or active/idle burst metrics. "
+                f"{len(INCOMPATIBLE_FEATURES)}/70 features are approximated or zero-grounded."
+            )
+            if pred.is_malicious:
+                pred.recommendation = (
+                    f"Experimental ML Flow Detection ({pred.prediction}): "
+                    f"Inspect flow from {source_ip or 'source'}. "
+                    "Unvalidated flow schema must be evaluated against labeled traffic."
+                )
+            else:
+                pred.recommendation = "Normal bidirectional network flow recorded (experimental schema)."
+            return pred
+
+        except Exception as exc:
+            logger.exception("[ML] Flow prediction error: %s", exc)
+            return self._error_result(str(exc))
+
     def predict_features(
         self,
         features: list[float] | np.ndarray,
         source_ip: Optional[str] = None,
         target_path: Optional[str] = None,
         rule_match=None,
+        schema_version: Optional[str] = None,
     ) -> MLPrediction:
         """
         Run prediction on a pre-built feature vector (for /api/v1/ai/predict).
@@ -161,13 +250,26 @@ class FANOSPredictor:
 
         try:
             feature_vec = validate_feature_vector(features)
-            return self._run_inference(
+            pred = self._run_inference(
                 feature_vec=feature_vec,
                 source_ip=source_ip,
                 target_path=target_path,
                 rule_match=rule_match,
                 t_start=t_start,
             )
+            if schema_version == SCHEMA_VERSION_SURICATA_FLOW:
+                pred.feature_schema = schema_version
+                pred.is_experimental = True
+                pred.validation_status = "EXPERIMENTAL_UNVALIDATED_APPROXIMATION"
+                pred.missing_features_count = len(INCOMPATIBLE_FEATURES)
+                pred.compatibility_warning = "Suricata summary telemetry approximation."
+            else:
+                pred.feature_schema = schema_version or SCHEMA_VERSION_CIC_FLOWMETER
+                pred.is_experimental = False
+                pred.validation_status = "VALIDATED"
+                pred.missing_features_count = 0
+                pred.compatibility_warning = None
+            return pred
 
         except Exception as exc:
             logger.exception("[ML] predict_features error: %s", exc)

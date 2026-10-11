@@ -24,7 +24,12 @@ MODEL_NAME = "16D_CHAMPION"
 MODEL_VERSION = "FANOS_V3"
 MODEL_ARTIFACT = "fanos_v3_xgboost_rare_improved.json"
 
+NATIVE_MODEL_NAME = "SURICATA_FLOW_NATIVE_V1"
+NATIVE_MODEL_VERSION = "FANOS_V3_NATIVE"
+NATIVE_MODEL_ARTIFACT = "fanos_v3_suricata_flow_native.json"
+
 NUM_FEATURES = 70
+NUM_NATIVE_FEATURES = 25
 NUM_CLASSES = 15
 
 # ── Verified Class_ID Mapping (0–14) ───────────────────────────────
@@ -106,8 +111,15 @@ class FANOSModelLoader:
     error_detail: str = ""
     load_time_ms: float = 0.0
 
+    # Suricata-Native Model state
+    native_status: str = "uninitialized"
+    native_model_name: str = NATIVE_MODEL_NAME
+    native_model_version: str = NATIVE_MODEL_VERSION
+    native_artifact_name: str = NATIVE_MODEL_ARTIFACT
+
     def __init__(self) -> None:
         self._booster = None
+        self._native_booster = None
 
     @classmethod
     def instance(cls) -> "FANOSModelLoader":
@@ -120,75 +132,71 @@ class FANOSModelLoader:
     def _load(self) -> None:
         import xgboost as xgb
 
-        model_path = self._resolve_path()
+        # 1. Load canonical 70-feature model (16D_CHAMPION)
+        model_path = self._resolve_path_for(MODEL_ARTIFACT)
         logger.info("[ML] Loading %s (%s) from %s", self.model_name, self.model_version, model_path)
 
         if model_path is None or not model_path.exists():
             self.status = "unavailable"
             self.error_detail = f"Model artifact not found: {model_path}"
             logger.error("[ML] %s", self.error_detail)
-            return
+        else:
+            t0 = time.perf_counter()
+            try:
+                booster = xgb.Booster()
+                booster.load_model(str(model_path))
 
-        t0 = time.perf_counter()
-        try:
-            booster = xgb.Booster()
-            booster.load_model(str(model_path))
-
-            # Validate feature count
-            actual_features = booster.num_features()
-            if actual_features != NUM_FEATURES:
+                actual_features = booster.num_features()
+                if actual_features != NUM_FEATURES:
+                    self.status = "error"
+                    self.error_detail = (
+                        f"Feature schema mismatch: model expects {actual_features} "
+                        f"features, runtime requires {NUM_FEATURES}"
+                    )
+                    logger.error("[ML] %s", self.error_detail)
+                else:
+                    self._booster = booster
+                    self.load_time_ms = (time.perf_counter() - t0) * 1000
+                    self.status = "loaded"
+                    logger.info(
+                        "[ML] Model %s (%s) loaded in %.1f ms | features=%d | classes=%d",
+                        self.model_name, self.model_version, self.load_time_ms, actual_features, NUM_CLASSES,
+                    )
+            except Exception as exc:
                 self.status = "error"
-                self.error_detail = (
-                    f"Feature schema mismatch: model expects {actual_features} "
-                    f"features, runtime requires {NUM_FEATURES}"
-                )
-                logger.error("[ML] %s", self.error_detail)
-                return
+                self.error_detail = str(exc)
+                logger.exception("[ML] Failed to load 70-feature model: %s", exc)
 
-            self._booster = booster
-            self.load_time_ms = (time.perf_counter() - t0) * 1000
-            self.status = "loaded"
-            logger.info(
-                "[ML] Model %s (%s) loaded successfully in %.1f ms | features=%d | classes=%d",
-                self.model_name, self.model_version, self.load_time_ms, actual_features, NUM_CLASSES,
-            )
-            logger.info("[ML] Verified 15-class mapping: %s", CLASS_ID_MAPPING)
+        # 2. Load Suricata-Native 25-feature model (SURICATA_FLOW_NATIVE_V1)
+        native_path = self._resolve_path_for(NATIVE_MODEL_ARTIFACT)
+        if native_path and native_path.exists():
+            try:
+                n_booster = xgb.Booster()
+                n_booster.load_model(str(native_path))
+                if n_booster.num_features() == NUM_NATIVE_FEATURES:
+                    self._native_booster = n_booster
+                    self.native_status = "loaded"
+                    logger.info(
+                        "[ML] Suricata-Native Model %s loaded successfully | features=%d",
+                        self.native_model_name, NUM_NATIVE_FEATURES,
+                    )
+            except Exception as exc:
+                logger.warning("[ML] Could not load native flow model: %s", exc)
 
-        except Exception as exc:
-            self.status = "error"
-            self.error_detail = str(exc)
-            logger.exception("[ML] Failed to load model: %s", exc)
-
-    @staticmethod
-    def _resolve_path() -> Optional[Path]:
-        """
-        Resolve model path checking configured environment variables and canonical locations:
-        1. AI_MODEL_PATH environment variable
-        2. backend/models/fanos_v3_xgboost_rare_improved.json
-        3. backend/app/models/fanos_v3_xgboost_rare_improved.json
-        """
-        candidate_paths = []
-
-        env_path = os.getenv("AI_MODEL_PATH")
-        if env_path:
-            candidate_paths.append(Path(env_path))
-
-        # Standard relative candidate paths
-        candidate_paths.extend([
-            Path("models/fanos_v3_xgboost_rare_improved.json"),
-            Path("app/models/fanos_v3_xgboost_rare_improved.json"),
-            Path("backend/models/fanos_v3_xgboost_rare_improved.json"),
-            Path("backend/app/models/fanos_v3_xgboost_rare_improved.json"),
-        ])
-
-        # Check directly from current working directory
+    @classmethod
+    def _resolve_path_for(cls, artifact_filename: str) -> Optional[Path]:
+        candidate_paths = [
+            Path(f"models/{artifact_filename}"),
+            Path(f"app/models/{artifact_filename}"),
+            Path(f"backend/models/{artifact_filename}"),
+            Path(f"backend/app/models/{artifact_filename}"),
+        ]
         for p in candidate_paths:
             if p.is_absolute() and p.exists():
                 return p
             if p.exists():
                 return p.resolve()
 
-        # Check relative to file's parent directories
         here = Path(__file__).resolve().parent
         for _ in range(5):
             for rel in candidate_paths:
@@ -196,35 +204,34 @@ class FANOSModelLoader:
                 if candidate.exists():
                     return candidate
             here = here.parent
+        return None
 
-        # Fallback to env_path or default relative path
-        return Path(env_path) if env_path else Path("models/fanos_v3_xgboost_rare_improved.json")
+    @staticmethod
+    def _resolve_path() -> Optional[Path]:
+        env_path = os.getenv("AI_MODEL_PATH")
+        if env_path and Path(env_path).exists():
+            return Path(env_path)
+        resolved = FANOSModelLoader._resolve_path_for(MODEL_ARTIFACT)
+        return resolved or Path("models/fanos_v3_xgboost_rare_improved.json")
 
-    # ── inference ────────────────────────────────────────────────────────
     def is_ready(self) -> bool:
         return self._booster is not None and self.status == "loaded"
 
-    def predict_proba(self, x: np.ndarray | list) -> np.ndarray:
+    def has_native_model(self) -> bool:
+        return self._native_booster is not None and self.native_status == "loaded"
+
+    def predict_proba(self, x: np.ndarray | list, model_type: str = "auto") -> np.ndarray:
         """
-        Run inference on x (shape: (N, 70)) and return probability matrix
+        Run inference on x (shape: (N, 70) or (N, 25)) and return probability matrix
         of shape (N, 15).
 
         Strict validations:
         - Model must be successfully loaded
         - Input must be numeric
-        - Shape must have exactly 70 features per sample
+        - Shape must match 70 features (champion) or 25 features (native)
         - Malformed/NaN/Inf input is rejected with ValueError
-
-        Raises RuntimeError if model is not loaded.
-        Raises ValueError if feature vector is malformed.
         """
         import xgboost as xgb
-
-        if not self.is_ready():
-            raise RuntimeError(
-                f"FANOS V3 XGBoost model ({self.model_name}) is not loaded (status={self.status}). "
-                f"Detail: {self.error_detail}"
-            )
 
         # Convert to numpy array if needed
         if not isinstance(x, np.ndarray):
@@ -241,12 +248,7 @@ class FANOSModelLoader:
             x = x.reshape(1, -1)
 
         if x.ndim != 2:
-            raise ValueError(f"Expected 2D feature matrix (N, 70) or 1D vector (70,), got {x.ndim}D array")
-
-        if x.shape[1] != NUM_FEATURES:
-            raise ValueError(
-                f"Feature count mismatch: expected exactly {NUM_FEATURES} features, got {x.shape[1]}"
-            )
+            raise ValueError(f"Expected 2D feature matrix or 1D vector, got {x.ndim}D array")
 
         if np.isnan(x).any():
             raise ValueError("Feature vector contains NaN values")
@@ -254,8 +256,30 @@ class FANOSModelLoader:
         if np.isinf(x).any():
             raise ValueError("Feature vector contains infinite values")
 
-        dmat = xgb.DMatrix(x.astype(np.float32))
-        raw = self._booster.predict(dmat)          # shape (N, 15)
+        # Determine target booster
+        if x.shape[1] == NUM_NATIVE_FEATURES or model_type == "native":
+            if not self.has_native_model():
+                raise RuntimeError(
+                    f"Suricata-native model ({self.native_model_name}) is not loaded (status={self.native_status})."
+                )
+            booster = self._native_booster
+            from app.ai.feature_extractor import SURICATA_NATIVE_FEATURES
+            dmat = xgb.DMatrix(x.astype(np.float32), feature_names=SURICATA_NATIVE_FEATURES)
+        elif x.shape[1] == NUM_FEATURES or model_type == "champion":
+            if not self.is_ready():
+                raise RuntimeError(
+                    f"FANOS V3 XGBoost model ({self.model_name}) is not loaded (status={self.status}). "
+                    f"Detail: {self.error_detail}"
+                )
+            booster = self._booster
+            dmat = xgb.DMatrix(x.astype(np.float32))
+        else:
+            raise ValueError(
+                f"Feature count mismatch: expected either {NUM_FEATURES} (CIC) or "
+                f"{NUM_NATIVE_FEATURES} (Native Suricata) features, got {x.shape[1]}"
+            )
+
+        raw = booster.predict(dmat)          # shape (N, 15)
 
         # XGBoost softprob returns flat (N*C,) when N==1 in some versions
         if raw.ndim == 1:

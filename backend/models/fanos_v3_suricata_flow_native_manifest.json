@@ -1,0 +1,194 @@
+{
+  "model_name": "SURICATA_FLOW_NATIVE_V1",
+  "model_version": "FANOS_V3_NATIVE",
+  "description": "Suricata-native network flow intrusion detection model trained on genuine EVE telemetry features.",
+  "num_features": 25,
+  "num_classes": 15,
+  "features": [
+    "Destination Port",
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Fwd Packet Length Mean",
+    "Bwd Packet Length Mean",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Fwd Packets/s",
+    "Bwd Packets/s",
+    "Fwd Header Length",
+    "Bwd Header Length",
+    "Packet Length Mean",
+    "Average Packet Size",
+    "Down/Up Ratio",
+    "FIN Flag Count",
+    "SYN Flag Count",
+    "RST Flag Count",
+    "PSH Flag Count",
+    "ACK Flag Count",
+    "URG Flag Count",
+    "CWE Flag Count",
+    "ECE Flag Count"
+  ],
+  "classes": {
+    "0": "BENIGN",
+    "1": "Bot",
+    "2": "DDoS",
+    "3": "DoS GoldenEye",
+    "4": "DoS Hulk",
+    "5": "DoS Slowhttptest",
+    "6": "DoS slowloris",
+    "7": "FTP-Patator",
+    "8": "Heartbleed",
+    "9": "Infiltration",
+    "10": "PortScan",
+    "11": "SSH-Patator",
+    "12": "Web Attack - Brute Force",
+    "13": "Web Attack - Sql Injection",
+    "14": "Web Attack - XSS"
+  },
+  "test_metrics": {
+    "accuracy": 0.9941605051540828,
+    "macro_precision": 0.8776299564737554,
+    "macro_recall": 0.9293255163820553,
+    "macro_f1": 0.8959498947692437,
+    "weighted_precision": 0.9958314782751025,
+    "weighted_recall": 0.9941605051540828,
+    "weighted_f1": 0.994801584559102,
+    "per_class": {
+      "BENIGN": {
+        "precision": 0.9994585570545503,
+        "recall": 0.9844888888888889,
+        "f1": 0.9919172469381815,
+        "support": 22500
+      },
+      "Bot": {
+        "precision": 0.6417582417582418,
+        "recall": 0.9931972789115646,
+        "f1": 0.7797062750333779,
+        "support": 294
+      },
+      "DDoS": {
+        "precision": 0.9998958441828976,
+        "recall": 0.9997917100604041,
+        "f1": 0.9998437744102484,
+        "support": 19204
+      },
+      "DoS GoldenEye": {
+        "precision": 0.9910141206675225,
+        "recall": 1.0,
+        "f1": 0.9954867827208252,
+        "support": 1544
+      },
+      "DoS Hulk": {
+        "precision": 0.9976448631354425,
+        "recall": 0.9978222222222223,
+        "f1": 0.997733534796907,
+        "support": 22500
+      },
+      "DoS Slowhttptest": {
+        "precision": 0.9987849331713244,
+        "recall": 0.9963636363636363,
+        "f1": 0.9975728155339806,
+        "support": 825
+      },
+      "DoS slowloris": {
+        "precision": 0.995418098510882,
+        "recall": 0.9988505747126437,
+        "f1": 0.9971313826735514,
+        "support": 870
+      },
+      "FTP-Patator": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 1190
+      },
+      "Heartbleed": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 1
+      },
+      "Infiltration": {
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.8888888888888888,
+        "support": 5
+      },
+      "PortScan": {
+        "precision": 0.9993778607296805,
+        "recall": 0.9995111111111111,
+        "f1": 0.9994444814790125,
+        "support": 22500
+      },
+      "SSH-Patator": {
+        "precision": 0.9943820224719101,
+        "recall": 1.0,
+        "f1": 0.9971830985915493,
+        "support": 885
+      },
+      "Web Attack - Brute Force": {
+        "precision": 0.5531914893617021,
+        "recall": 0.6902654867256637,
+        "f1": 0.6141732283464567,
+        "support": 226
+      },
+      "Web Attack - Sql Injection": {
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571428571428571,
+        "support": 3
+      },
+      "Web Attack - XSS": {
+        "precision": 0.24352331606217617,
+        "recall": 0.47959183673469385,
+        "f1": 0.3230240549828179,
+        "support": 98
+      }
+    }
+  },
+  "feature_importance_gain": {
+    "PSH Flag Count": 399.9692687988281,
+    "SYN Flag Count": 338.9216613769531,
+    "Average Packet Size": 311.1702880859375,
+    "Total Length of Bwd Packets": 309.37158203125,
+    "Destination Port": 276.6037292480469,
+    "ACK Flag Count": 266.3094787597656,
+    "Bwd Header Length": 212.3848876953125,
+    "Bwd Packet Length Mean": 194.7349090576172,
+    "Total Length of Fwd Packets": 162.49771118164062,
+    "Packet Length Mean": 141.17369079589844,
+    "FIN Flag Count": 139.3804931640625,
+    "Total Backward Packets": 135.61886596679688,
+    "Total Fwd Packets": 113.08550262451172,
+    "Fwd Packet Length Mean": 112.73265075683594,
+    "Bwd Packets/s": 105.73406982421875,
+    "Fwd Header Length": 80.435302734375,
+    "Flow Bytes/s": 50.7908935546875,
+    "Down/Up Ratio": 45.27903747558594,
+    "Flow Packets/s": 45.01198196411133,
+    "Fwd Packets/s": 34.1296272277832,
+    "URG Flag Count": 22.223934173583984,
+    "Flow Duration": 21.989208221435547
+  },
+  "class_weights": {
+    "0": 0.2745009523809524,
+    "1": 21.053761869978086,
+    "2": 0.3216197819610119,
+    "3": 4.000360860513532,
+    "4": 0.2745009523809524,
+    "5": 7.4883346323720446,
+    "6": 7.104412127187577,
+    "7": 5.188586858685869,
+    "8": 40.0,
+    "9": 40.0,
+    "10": 0.2745009523809524,
+    "11": 6.982218992248062,
+    "12": 27.32,
+    "13": 40.0,
+    "14": 40.0
+  },
+  "created_at": "2026-10-11T09:15:26Z"
+}

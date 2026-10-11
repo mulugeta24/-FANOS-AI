@@ -9,6 +9,7 @@ from pathlib import Path
 EVE_FILE = Path(os.environ.get("SURICATA_EVE_LOG", "/var/log/suricata/eve.json"))
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:8000")
 API_ENDPOINT = f"{BACKEND_URL.rstrip('/')}/api/v1/suricata/events"
+FLOW_ENDPOINT = f"{BACKEND_URL.rstrip('/')}/api/v1/suricata/flows"
 SURICATA_TOKEN = os.environ.get("FANOS_SURICATA_TOKEN", "")
 
 def normalize_suricata_event(raw_event, event_id):
@@ -125,6 +126,48 @@ def send_to_backend(event):
             print(f"[BACKEND] Unexpected error: {str(e)}. Retrying in {retry_delay}s...")
             time.sleep(retry_delay)
 
+
+def send_flow_to_backend(event):
+    event_id = str(uuid.uuid4())
+    payload = {
+        "event_id": event_id,
+        "flow_id": event.get("flow_id"),
+        "timestamp": event.get("timestamp"),
+        "event_type": "flow",
+        "source_ip": event.get("src_ip", "unknown"),
+        "source_port": event.get("src_port"),
+        "destination_ip": event.get("dest_ip", "unknown"),
+        "destination_port": event.get("dest_port"),
+        "protocol": event.get("proto", "unknown").upper() if event.get("proto") else "unknown",
+        "app_proto": event.get("app_proto"),
+        "community_id": event.get("community_id"),
+        "flow": event.get("flow", {}),
+        "tcp": event.get("tcp", {}),
+        "sensor_id": "ubuntu-suricata-01",
+        "raw_event": event
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+    if SURICATA_TOKEN:
+        headers["x-fanos-suricata-token"] = SURICATA_TOKEN
+
+    req = urllib.request.Request(
+        FLOW_ENDPOINT,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST"
+    )
+
+    try:
+        response = urllib.request.urlopen(req, timeout=5)
+        status_code = response.getcode()
+        print(f"[FLOW] Forwarded flow {event.get('flow_id')} -> Backend: {status_code}")
+    except Exception as e:
+        print(f"[FLOW] Flow forwarding error: {e}")
+
+
 def print_alert(event):
     alert = event.get("alert", {})
     flow_id = event.get("flow_id", "N/A")
@@ -149,7 +192,8 @@ def print_alert(event):
 def main():
     print("[INFO] Suricata Collector started")
     print(f"[INFO] Watching {EVE_FILE}")
-    print(f"Backend URL: {BACKEND_URL}")
+    print(f"Backend Alert URL: {API_ENDPOINT}")
+    print(f"Backend Flow URL : {FLOW_ENDPOINT}")
     print()
 
     if not EVE_FILE.exists():
@@ -158,7 +202,7 @@ def main():
         return
 
     print("SUCCESS: eve.json found.")
-    print("Collector is waiting for NEW Suricata events...")
+    print("Collector is waiting for NEW Suricata events (alerts & flows)...")
     print("Press Ctrl+C to stop.")
     print()
 
@@ -184,9 +228,15 @@ def main():
                 print("WARNING: Invalid JSON line received.")
                 continue
 
-            if event.get("event_type") == "alert":
+            event_type = event.get("event_type")
+            if event_type == "alert":
                 print_alert(event)
                 send_to_backend(event)
+            elif event_type == "flow":
+                send_flow_to_backend(event)
+            else:
+                # Explicit policy: non-alert and non-flow telemetry ignored quietly
+                pass
 
 
 if __name__ == "__main__":

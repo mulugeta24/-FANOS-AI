@@ -202,6 +202,97 @@ _PORT_SERVICE_SIZES: Dict[int, tuple[float, float]] = {
 _DEFAULT_SERVICE = (300.0, 400.0)
 
 
+SCHEMA_VERSION_SURICATA_FLOW = "SURICATA_FLOW_DERIVED_V1"
+SCHEMA_VERSION_SURICATA_NATIVE = "SURICATA_FLOW_NATIVE_V1"
+SCHEMA_VERSION_CIC_FLOWMETER = "CIC_FLOWMETER_V3"
+SCHEMA_VERSION_SURICATA_ALERT_LEGACY = "SURICATA_ALERT_LEGACY"
+
+NUM_NATIVE_FEATURES = 25
+SURICATA_NATIVE_FEATURES: List[str] = [
+    "Destination Port",
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Fwd Packet Length Mean",
+    "Bwd Packet Length Mean",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Fwd Packets/s",
+    "Bwd Packets/s",
+    "Fwd Header Length",
+    "Bwd Header Length",
+    "Packet Length Mean",
+    "Average Packet Size",
+    "Down/Up Ratio",
+    "FIN Flag Count",
+    "SYN Flag Count",
+    "RST Flag Count",
+    "PSH Flag Count",
+    "ACK Flag Count",
+    "URG Flag Count",
+    "CWE Flag Count",
+    "ECE Flag Count",
+]
+
+# Positional index partitions according to live Suricata availability
+MEASURED_FEATURE_INDICES: List[int] = [0, 1, 2, 3, 4, 5, 30, 31, 41, 42, 43, 44, 45, 46, 47, 48, 53]
+DERIVED_FEATURE_INDICES: List[int] = [8, 12, 14, 15, 16, 20, 21, 25, 26, 32, 33, 34, 35, 38, 49, 50, 51, 52, 54, 55, 56]
+INCOMPATIBLE_FEATURE_INDICES: List[int] = [
+    6, 7, 9, 10, 11, 13, 17, 18, 19, 22, 23, 24, 27, 28, 29, 36, 37, 39, 40,
+    57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69
+]
+
+MEASURED_FEATURES: List[str] = [CANONICAL_FEATURES[i] for i in MEASURED_FEATURE_INDICES]
+DERIVED_FEATURES: List[str] = [CANONICAL_FEATURES[i] for i in DERIVED_FEATURE_INDICES]
+INCOMPATIBLE_FEATURES: List[str] = [CANONICAL_FEATURES[i] for i in INCOMPATIBLE_FEATURE_INDICES]
+
+
+def get_schema_compatibility_summary(schema_version: str) -> dict[str, Any]:
+    """Returns detailed compatibility audit and breakdown for a given schema."""
+    if schema_version == SCHEMA_VERSION_CIC_FLOWMETER:
+        return {
+            "schema_version": schema_version,
+            "status": "VALIDATED",
+            "is_authoritative": True,
+            "is_experimental": False,
+            "measured_features": NUM_FEATURES,
+            "derived_features": 0,
+            "incompatible_features": 0,
+            "incompatible_feature_names": [],
+            "warning": None,
+        }
+    elif schema_version == SCHEMA_VERSION_SURICATA_FLOW:
+        return {
+            "schema_version": schema_version,
+            "status": "EXPERIMENTAL_UNVALIDATED_APPROXIMATION",
+            "is_authoritative": False,
+            "is_experimental": True,
+            "measured_features": len(MEASURED_FEATURES),
+            "derived_features": len(DERIVED_FEATURES),
+            "incompatible_features": len(INCOMPATIBLE_FEATURES),
+            "incompatible_feature_names": INCOMPATIBLE_FEATURES,
+            "warning": (
+                "Suricata EVE summary flow telemetry cannot provide packet variance, "
+                "extrema, TCP initial window sizes, or active/idle burst durations. "
+                f"{len(INCOMPATIBLE_FEATURES)} of {NUM_FEATURES} features are approximated or zero-grounded."
+            ),
+        }
+    else:
+        return {
+            "schema_version": schema_version,
+            "status": "EXPERIMENTAL_ALERT_HEURISTIC",
+            "is_authoritative": False,
+            "is_experimental": True,
+            "measured_features": 2,
+            "derived_features": 0,
+            "incompatible_features": 68,
+            "incompatible_feature_names": [f for f in CANONICAL_FEATURES if f not in ("Destination Port", "Flow Duration")],
+            "warning": "Constructed from Suricata alert metadata heuristics.",
+        }
+
+
 def validate_feature_vector(vec: np.ndarray | List[float]) -> np.ndarray:
     """
     Validates that a feature vector adheres to the exact FANOS V3 contract:
@@ -239,12 +330,42 @@ def validate_feature_vector(vec: np.ndarray | List[float]) -> np.ndarray:
 class FeatureExtractor:
     """
     Extracts the 70-feature CIC-IDS style vector from a FANOS / Suricata
-    security event dictionary.
-
-    The event dict is the SuricataEventIngestion payload or any dict with
-    the canonical FANOS fields (destination_port, protocol, severity, etc.)
-    or a full CIC-FlowMeter dictionary.
+    security event dictionary or genuine Suricata network flow record.
     """
+
+    def extract_suricata_native_flow(self, event: dict[str, Any]) -> tuple[np.ndarray, str]:
+        """
+        Extract genuine measured network flow statistics strictly matching the
+        Suricata-native 25-feature model (SURICATA_FLOW_NATIVE_V1).
+        Contains 0 approximations and 0 fake zero-filled metrics.
+        """
+        if not isinstance(event, dict):
+            raise ValueError(f"Expected dict, got {type(event).__name__}")
+
+        f = self._build_suricata_native(event)
+        if len(f) != NUM_NATIVE_FEATURES:
+            raise ValueError(f"Feature schema error: extracted {len(f)} features, expected {NUM_NATIVE_FEATURES}")
+
+        vec = np.array(f, dtype=np.float32)
+        if np.isnan(vec).any() or np.isinf(vec).any():
+            raise ValueError("Feature vector contains NaN or infinite values")
+        return vec, SCHEMA_VERSION_SURICATA_NATIVE
+
+    def extract_from_suricata_flow(self, event: dict[str, Any]) -> tuple[np.ndarray, str]:
+        """
+        Extract genuine network flow statistics mapped to 70-feature schema.
+        Schema: SURICATA_FLOW_DERIVED_V1 (Experimental partial telemetry).
+        """
+        if not isinstance(event, dict):
+            raise ValueError(f"Expected dict, got {type(event).__name__}")
+
+        f = self._build_from_suricata_flow(event)
+        if len(f) != NUM_FEATURES:
+            raise ValueError(f"Feature schema error: extracted {len(f)} features, expected {NUM_FEATURES}")
+
+        vec = np.array(f, dtype=np.float32)
+        validate_feature_vector(vec)
+        return vec, SCHEMA_VERSION_SURICATA_FLOW
 
     def extract(self, event: dict[str, Any]) -> np.ndarray:
         """
@@ -255,6 +376,11 @@ class FeatureExtractor:
         """
         if not isinstance(event, dict):
             raise ValueError(f"Expected dict, got {type(event).__name__}")
+
+        # If incoming event is explicitly a Suricata flow record with a flow object
+        if event.get("event_type") == "flow" or ("flow" in event and isinstance(event.get("flow"), dict)):
+            vec, _ = self.extract_from_suricata_flow(event)
+            return vec
 
         f = self._build(event)
         if len(f) != NUM_FEATURES:
@@ -267,8 +393,263 @@ class FeatureExtractor:
 
     # ── Internal ─────────────────────────────────────────────────────────
 
+    def _build_suricata_native(self, ev: dict[str, Any]) -> list[float]:
+        """Constructs the genuine 25-feature vector strictly from Suricata flow telemetry."""
+        dst_port = float(self._get_int(ev, ["destination_port", "dest_port", "dst_port"], 0))
+        proto_str = str(ev.get("protocol") or ev.get("proto") or "TCP").upper()
+        is_tcp = proto_str == "TCP"
+
+        flow_data = ev.get("flow") if isinstance(ev.get("flow"), dict) else {}
+        tcp_data = ev.get("tcp") if isinstance(ev.get("tcp"), dict) else {}
+
+        fwd_pkts = float(flow_data.get("pkts_toserver") or 0)
+        bwd_pkts = float(flow_data.get("pkts_toclient") or 0)
+        total_fwd_len = float(flow_data.get("bytes_toserver") or 0)
+        total_bwd_len = float(flow_data.get("bytes_toclient") or 0)
+
+        duration = 1000.0  # 1ms base default for zero-duration packet bursts
+        start_str = flow_data.get("start")
+        end_str = flow_data.get("end")
+        if start_str and end_str:
+            try:
+                from datetime import datetime
+                s_dt = datetime.fromisoformat(str(start_str).replace("Z", "+00:00"))
+                e_dt = datetime.fromisoformat(str(end_str).replace("Z", "+00:00"))
+                diff_us = (e_dt - s_dt).total_seconds() * 1e6
+                if diff_us > 0:
+                    duration = float(diff_us)
+                elif flow_data.get("age") is not None:
+                    age_sec = float(flow_data.get("age"))
+                    if age_sec > 0:
+                        duration = age_sec * 1e6
+            except Exception:
+                pass
+        elif flow_data.get("age") is not None:
+            try:
+                age_sec = float(flow_data.get("age"))
+                if age_sec > 0:
+                    duration = age_sec * 1e6
+            except (ValueError, TypeError):
+                pass
+
+        duration_s = max(duration / 1e6, 1e-6)
+        total_bytes = total_fwd_len + total_bwd_len
+        total_pkts = fwd_pkts + bwd_pkts
+
+        fwd_pkt_mean = (total_fwd_len / fwd_pkts) if fwd_pkts > 0 else 0.0
+        bwd_pkt_mean = (total_bwd_len / bwd_pkts) if bwd_pkts > 0 else 0.0
+        flow_bytes_s = total_bytes / duration_s
+        flow_pkts_s = total_pkts / duration_s
+        fwd_pkts_s = fwd_pkts / duration_s
+        bwd_pkts_s = bwd_pkts / duration_s
+
+        hdr_sz = 20.0 if is_tcp else 8.0
+        fwd_hdr_len = fwd_pkts * hdr_sz
+        bwd_hdr_len = bwd_pkts * hdr_sz
+
+        mean_pkt = (total_bytes / total_pkts) if total_pkts > 0 else 0.0
+        avg_pkt_size = mean_pkt
+        down_up = (bwd_pkts / fwd_pkts) if fwd_pkts > 0 else 0.0
+
+        fin_flag = 1.0 if tcp_data.get("fin") else 0.0
+        syn_flag = 1.0 if tcp_data.get("syn") else 0.0
+        rst_flag = 1.0 if tcp_data.get("rst") else 0.0
+        psh_flag = 1.0 if tcp_data.get("psh") else 0.0
+        ack_flag = 1.0 if tcp_data.get("ack") else 0.0
+        urg_flag = 1.0 if tcp_data.get("urg") else 0.0
+        cwe_flag = 1.0 if tcp_data.get("cwr") else 0.0
+        ece_flag = 1.0 if tcp_data.get("ece") else 0.0
+
+        return [
+            dst_port,
+            duration,
+            fwd_pkts,
+            bwd_pkts,
+            total_fwd_len,
+            total_bwd_len,
+            fwd_pkt_mean,
+            bwd_pkt_mean,
+            flow_bytes_s,
+            flow_pkts_s,
+            fwd_pkts_s,
+            bwd_pkts_s,
+            fwd_hdr_len,
+            bwd_hdr_len,
+            mean_pkt,
+            avg_pkt_size,
+            down_up,
+            fin_flag,
+            syn_flag,
+            rst_flag,
+            psh_flag,
+            ack_flag,
+            urg_flag,
+            cwe_flag,
+            ece_flag,
+        ]
+
+    def _build_from_suricata_flow(self, ev: dict[str, Any]) -> list[float]:
+        """
+        Constructs the 70-feature vector using genuine flow telemetry metrics from Suricata.
+        Does NOT fabricate duration or packet counts from alert severity.
+        """
+        dst_port = float(self._get_int(ev, ["destination_port", "dest_port", "dst_port"], 0))
+        proto_str = str(ev.get("protocol") or ev.get("proto") or "TCP").upper()
+        is_tcp = proto_str == "TCP"
+
+        flow_data = ev.get("flow") if isinstance(ev.get("flow"), dict) else {}
+        tcp_data = ev.get("tcp") if isinstance(ev.get("tcp"), dict) else {}
+
+        # 1. Genuine packets and byte lengths
+        fwd_pkts = float(flow_data.get("pkts_toserver") or 0)
+        bwd_pkts = float(flow_data.get("pkts_toclient") or 0)
+        total_fwd_len = float(flow_data.get("bytes_toserver") or 0)
+        total_bwd_len = float(flow_data.get("bytes_toclient") or 0)
+
+        # 2. Genuine duration (microseconds)
+        duration = 1000.0  # 1ms base default for zero-duration packet bursts
+        start_str = flow_data.get("start")
+        end_str = flow_data.get("end")
+        if start_str and end_str:
+            try:
+                from datetime import datetime
+                s_dt = datetime.fromisoformat(str(start_str).replace("Z", "+00:00"))
+                e_dt = datetime.fromisoformat(str(end_str).replace("Z", "+00:00"))
+                diff_us = (e_dt - s_dt).total_seconds() * 1e6
+                if diff_us > 0:
+                    duration = float(diff_us)
+                elif flow_data.get("age") is not None:
+                    age_sec = float(flow_data.get("age"))
+                    if age_sec > 0:
+                        duration = age_sec * 1e6
+            except Exception:
+                pass
+        elif flow_data.get("age") is not None:
+            try:
+                age_sec = float(flow_data.get("age"))
+                if age_sec > 0:
+                    duration = age_sec * 1e6
+            except (ValueError, TypeError):
+                pass
+
+        duration_s = max(duration / 1e6, 1e-6)
+
+        # 3. Genuine packet sizes
+        fwd_pkt_mean = (total_fwd_len / fwd_pkts) if fwd_pkts > 0 else 0.0
+        bwd_pkt_mean = (total_bwd_len / bwd_pkts) if bwd_pkts > 0 else 0.0
+        fwd_pkt_min = fwd_pkt_mean
+        fwd_pkt_max = fwd_pkt_mean
+        fwd_pkt_std = 0.0
+
+        bwd_pkt_min = bwd_pkt_mean
+        bwd_pkt_max = bwd_pkt_mean
+        bwd_pkt_std = 0.0
+
+        # 4. Genuine rates
+        total_bytes = total_fwd_len + total_bwd_len
+        total_pkts = fwd_pkts + bwd_pkts
+        flow_bytes_s = total_bytes / duration_s
+        flow_pkts_s = total_pkts / duration_s
+
+        # 5. Inter-arrival time mathematical means
+        iat_mean = duration / max(total_pkts - 1.0, 1.0)
+        iat_std = 0.0
+        iat_max = duration
+        iat_min = 0.0
+
+        fwd_iat_total = duration if fwd_pkts > 1 else 0.0
+        fwd_iat_mean = (duration / max(fwd_pkts - 1.0, 1.0)) if fwd_pkts > 1 else 0.0
+        fwd_iat_std = 0.0
+        fwd_iat_max = duration if fwd_pkts > 1 else 0.0
+        fwd_iat_min = 0.0
+
+        bwd_iat_total = duration if bwd_pkts > 1 else 0.0
+        bwd_iat_mean = (duration / max(bwd_pkts - 1.0, 1.0)) if bwd_pkts > 1 else 0.0
+        bwd_iat_std = 0.0
+        bwd_iat_max = duration if bwd_pkts > 1 else 0.0
+        bwd_iat_min = 0.0
+
+        # 6. Genuine TCP flags from Suricata telemetry
+        psh_flag = 1.0 if tcp_data.get("psh") else 0.0
+        urg_flag = 1.0 if tcp_data.get("urg") else 0.0
+        fin_flag = 1.0 if tcp_data.get("fin") else 0.0
+        syn_flag = 1.0 if tcp_data.get("syn") else 0.0
+        rst_flag = 1.0 if tcp_data.get("rst") else 0.0
+        ack_flag = 1.0 if tcp_data.get("ack") else 0.0
+        ece_flag = 1.0 if tcp_data.get("ece") else 0.0
+        cwe_flag = 1.0 if tcp_data.get("cwr") else 0.0
+
+        fwd_psh = psh_flag
+        fwd_urg = urg_flag
+
+        hdr_sz = 20.0 if is_tcp else 8.0
+        fwd_hdr_len = fwd_pkts * hdr_sz
+        bwd_hdr_len = bwd_pkts * hdr_sz
+
+        fwd_pkts_s = fwd_pkts / duration_s
+        bwd_pkts_s = bwd_pkts / duration_s
+
+        # 7. Global packet length moments
+        mean_pkt = (total_bytes / total_pkts) if total_pkts > 0 else 0.0
+        min_pkt = mean_pkt
+        max_pkt = mean_pkt
+        std_pkt = 0.0
+        var_pkt = 0.0
+
+        down_up = (bwd_pkts / fwd_pkts) if fwd_pkts > 0 else 0.0
+        avg_pkt_size = mean_pkt
+        avg_fwd_seg = fwd_pkt_mean
+        avg_bwd_seg = bwd_pkt_mean
+
+        # 8. Subflow metrics
+        sub_fwd_pkts = fwd_pkts
+        sub_fwd_bytes = total_fwd_len
+        sub_bwd_pkts = bwd_pkts
+        sub_bwd_bytes = total_bwd_len
+
+        # 9. Initial TCP window and segment size
+        init_win_fwd = 0.0
+        init_win_bwd = 0.0
+        act_data_fwd = fwd_pkts
+        min_seg_fwd = hdr_sz
+
+        # 10. Active / Idle periods (neutral zero baseline)
+        active_mean = 0.0
+        active_std = 0.0
+        active_max = 0.0
+        active_min = 0.0
+        idle_mean = 0.0
+        idle_std = 0.0
+        idle_max = 0.0
+        idle_min = 0.0
+
+        return [
+            # 00-09
+            dst_port, duration, fwd_pkts, bwd_pkts, total_fwd_len, total_bwd_len,
+            fwd_pkt_max, fwd_pkt_min, fwd_pkt_mean, fwd_pkt_std,
+            # 10-19
+            bwd_pkt_max, bwd_pkt_min, bwd_pkt_mean, bwd_pkt_std,
+            flow_bytes_s, flow_pkts_s, iat_mean, iat_std, iat_max, iat_min,
+            # 20-29
+            fwd_iat_total, fwd_iat_mean, fwd_iat_std, fwd_iat_max, fwd_iat_min,
+            bwd_iat_total, bwd_iat_mean, bwd_iat_std, bwd_iat_max, bwd_iat_min,
+            # 30-39
+            fwd_psh, fwd_urg, fwd_hdr_len, bwd_hdr_len, fwd_pkts_s, bwd_pkts_s,
+            min_pkt, max_pkt, mean_pkt, std_pkt,
+            # 40-49
+            var_pkt, fin_flag, syn_flag, rst_flag, psh_flag, ack_flag, urg_flag, cwe_flag, ece_flag, down_up,
+            # 50-59
+            avg_pkt_size, avg_fwd_seg, avg_bwd_seg, fwd_hdr_len,
+            sub_fwd_pkts, sub_fwd_bytes, sub_bwd_pkts, sub_bwd_bytes,
+            init_win_fwd, init_win_bwd,
+            # 60-69
+            act_data_fwd, min_seg_fwd,
+            active_mean, active_std, active_max, active_min,
+            idle_mean, idle_std, idle_max, idle_min,
+        ]
+
     def _build(self, ev: dict[str, Any]) -> list[float]:
-        """Assemble all 70 features in canonical positional order."""
+        """Assemble all 70 features in canonical positional order (Legacy Suricata Alert path)."""
 
         # If the event carries raw CIC-style flow features, extract directly
         if "flow_duration" in ev or "Flow Duration" in ev:

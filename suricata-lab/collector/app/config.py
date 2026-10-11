@@ -12,5 +12,19 @@ class Settings:
     poll_seconds: float = float(os.getenv("SURICATA_POLL_SECONDS", "1"))
     retry_seconds: float = float(os.getenv("SURICATA_RETRY_SECONDS", "5"))
 
+    @property
+    def events_url(self) -> str:
+        return self.backend_url
+
+    @property
+    def flows_url(self) -> str:
+        explicit = os.getenv("FANOS_SURICATA_FLOW_URL")
+        if explicit:
+            return explicit
+        if self.backend_url.endswith("/events"):
+            return self.backend_url[:-7] + "/flows"
+        return f"{self.backend_url.rstrip('/')}/flows"
+
 
 settings = Settings()
+

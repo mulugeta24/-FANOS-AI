@@ -39,3 +39,12 @@ backups/
 # IDE/editor
 .vscode/
 .idea/
+
+# Datasets and Large Data Files
+*.csv
+*.pcap
+ml/MachineLearningCVE/
+
+# Scratch investigation dumps
+backend/*_out.txt
+backend/nb_audit_extracted.txt

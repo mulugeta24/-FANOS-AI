@@ -37,6 +37,12 @@ class MLPredictionResponse(BaseModel):
     recommendation:     str
     inference_ms:       float
     num_features:       int
+    # Schema validation and experimental metadata
+    is_experimental:        bool = False
+    feature_schema:         Optional[str] = None
+    validation_status:      Optional[str] = None
+    missing_features_count: Optional[int] = 0
+    compatibility_warning:  Optional[str] = None
     # Rule engine fields
     rule_triggered:     Optional[str] = None
     rule_action:        Optional[str] = None
@@ -148,6 +154,11 @@ async def predict_full(body: PredictionRequest) -> MLPredictionResponse:
         recommendation=ml.recommendation,
         inference_ms=ml.inference_ms,
         num_features=ml.num_features,
+        is_experimental=getattr(ml, "is_experimental", False),
+        feature_schema=getattr(ml, "feature_schema", None),
+        validation_status=getattr(ml, "validation_status", "VALIDATED"),
+        missing_features_count=getattr(ml, "missing_features_count", 0),
+        compatibility_warning=getattr(ml, "compatibility_warning", None),
         rule_triggered=rule_match.rule_name if rule_match else None,
         rule_action=rule_match.action if rule_match else None,
     )
@@ -198,6 +209,11 @@ async def predict_event(event: dict) -> MLPredictionResponse:
         recommendation=ml.recommendation,
         inference_ms=ml.inference_ms,
         num_features=ml.num_features,
+        is_experimental=getattr(ml, "is_experimental", False),
+        feature_schema=getattr(ml, "feature_schema", None),
+        validation_status=getattr(ml, "validation_status", "VALIDATED"),
+        missing_features_count=getattr(ml, "missing_features_count", 0),
+        compatibility_warning=getattr(ml, "compatibility_warning", None),
         rule_triggered=rule_match.rule_name if rule_match else None,
         rule_action=rule_match.action if rule_match else None,
     )
