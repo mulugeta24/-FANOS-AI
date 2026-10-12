@@ -46,17 +46,20 @@ export interface SecurityEvent {
   timestamp?:     string
   created_at?:    string
   sensor_source?: string
+  raw_payload?:   string
 }
 
 // Incident
 export interface Incident {
   id:             string
   threat:         string
+  title?:         string
   severity:       Severity
   source_ip:      string
-  status:         IncidentStatus
+  status:         IncidentStatus | string
   risk_score:     number
-  assigned_to:    string
+  assigned_to?:   string
+  description?:   string
   created_at:     string
 }
 
@@ -78,6 +81,10 @@ export interface AIEngineStatus {
   f1_score:         number
   inference_ms:     number
   requests_per_sec: number
+  num_features?:    number
+  num_classes?:     number
+  load_time_ms?:    number
+  model_error?:     string | null
 }
 
 // Sensor
@@ -114,6 +121,16 @@ export interface PreventionStatus {
   waf_blocks:       number
   firewall_actions: number
   auto_response:    boolean
+}
+
+// Blocked IP
+export interface BlockedIP {
+  id:         string
+  ip_address: string
+  reason:     string
+  blocked_by: string
+  is_active:  boolean
+  created_at: string
 }
 
 // Web Security

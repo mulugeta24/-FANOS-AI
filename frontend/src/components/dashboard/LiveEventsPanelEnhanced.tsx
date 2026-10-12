@@ -127,7 +127,7 @@ export default function LiveEventsPanelEnhanced({ onOpenIncident, onOpenIP }: Pr
         const risk = ev.risk_score || (ev.ai_confidence ? Math.round(ev.ai_confidence) : 80)
         return {
           id: ev.id ? `EVT-${String(ev.id).slice(0, 6)}` : `EVT-${idx + 1}`,
-          rawId: ev.id,
+          rawId: ev.id || `${idx + 1}`,
           severity: ev.severity || 'INFO',
           timestamp: timestampStr,
           threat: ev.attack_type || ev.threat || 'Network Event',
@@ -140,7 +140,7 @@ export default function LiveEventsPanelEnhanced({ onOpenIncident, onOpenIP }: Pr
           incidentId: ev.incident_id || null,
         }
       })
-    : LIVE_EVENTS
+    : []
 
   return (
     <div className="fanos-card">
@@ -173,65 +173,91 @@ export default function LiveEventsPanelEnhanced({ onOpenIncident, onOpenIP }: Pr
         ))}
       </div>
 
-      <div className="divide-y divide-white/[0.03]">
-        {events.map(ev => (
-          <div
-            key={ev.id}
-            className={`grid ${COLS} gap-2 px-4 py-2.5 items-center transition-colors cursor-pointer ${
-              hovered === ev.id ? 'bg-white/[0.025]' : 'hover:bg-white/[0.015]'
-            }`}
-            onMouseEnter={() => setHovered(ev.id)}
-            onMouseLeave={() => setHovered(null)}
-            onClick={() => {
-              if (ev.incidentId && onOpenIncident) onOpenIncident(CRITICAL_INCIDENT)
-            }}
-          >
-            {/* Severity */}
-            <span className={severityClass(ev.severity)}>{ev.severity}</span>
-
-            {/* Timestamp */}
-            <span className="font-mono text-[11px] text-fanos-dim">{ev.timestamp}</span>
-
-            {/* Threat */}
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[12px] text-fanos-text font-medium truncate">{ev.threat}</span>
-              {ev.incidentId && (
-                <ChevronRight size={10} className="text-fanos-accent flex-shrink-0" />
-              )}
-            </div>
-
-            {/* Source IP — clickable */}
-            <button
-              className="font-mono text-[11px] text-fanos-accent hover:text-white flex items-center gap-1 transition-colors text-left truncate"
-              onClick={(e) => { e.stopPropagation(); onOpenIP?.(ev.sourceIp) }}
-              title={`View threat intel for ${ev.sourceIp}`}
-            >
-              {ev.sourceIp}
-              <ExternalLink size={9} className="flex-shrink-0 opacity-0 group-hover:opacity-100" />
-            </button>
-
-            {/* Destination */}
-            <span className="text-[11px] text-fanos-muted truncate">{ev.dest}</span>
-
-            {/* Asset */}
-            <span className="text-[11px] text-fanos-muted truncate">{ev.asset}</span>
-
-            {/* AI Risk */}
-            <RiskBar value={ev.aiRisk} />
-
-            {/* Status */}
-            <span className={statusClass(ev.status)}>{ev.status}</span>
-
-            {/* Action */}
-            <span className="text-[11px] text-fanos-dim truncate">{ev.action}</span>
+      {events.length === 0 ? (
+        <div className="py-12 flex flex-col items-center justify-center text-center px-4">
+          <div className="w-10 h-10 rounded-full bg-white/[0.04] flex items-center justify-center mb-3">
+            <Zap size={18} className="text-fanos-dim" />
           </div>
-        ))}
-      </div>
+          <p className="text-[13px] font-medium text-white mb-1">No Security Events Recorded</p>
+          <p className="text-[12px] text-fanos-muted max-w-sm">
+            Live telemetry streams here when the Suricata collector forwards alerts.
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y divide-white/[0.03]">
+          {events.map(ev => (
+            <div
+              key={ev.id}
+              className={`grid ${COLS} gap-2 px-4 py-2.5 items-center transition-colors cursor-pointer ${
+                hovered === ev.id ? 'bg-white/[0.025]' : 'hover:bg-white/[0.015]'
+              }`}
+              onMouseEnter={() => setHovered(ev.id)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => {
+                if (onOpenIncident) {
+                  onOpenIncident({
+                    id: ev.incidentId || `INC-${ev.id}`,
+                    severity: (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(ev.severity) ? ev.severity : 'LOW') as any,
+                    title: `${ev.threat} detected from ${ev.sourceIp}`,
+                    riskScore: ev.aiRisk,
+                    affectedAssets: 1,
+                    affectedUsers: 1,
+                    firstSeen: ev.timestamp,
+                    lastSeen: ev.timestamp,
+                    status: (ev.status === 'BLOCKED' ? 'BLOCKED' : ev.status === 'CONTAINED' ? 'CONTAINED' : 'OPEN') as any,
+                    sourceIp: ev.sourceIp,
+                    destIp: ev.dest,
+                    asset: ev.asset,
+                    category: ev.threat,
+                  })
+                }
+              }}
+            >
+              {/* Severity */}
+              <span className={severityClass(ev.severity)}>{ev.severity}</span>
+
+              {/* Timestamp */}
+              <span className="font-mono text-[11px] text-fanos-dim">{ev.timestamp}</span>
+
+              {/* Threat */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[12px] text-fanos-text font-medium truncate">{ev.threat}</span>
+                <ChevronRight size={10} className="text-fanos-dim flex-shrink-0" />
+              </div>
+
+              {/* Source IP — clickable */}
+              <button
+                className="font-mono text-[11px] text-fanos-accent hover:text-white flex items-center gap-1 transition-colors text-left truncate"
+                onClick={(e) => { e.stopPropagation(); onOpenIP?.(ev.sourceIp) }}
+                title={`View threat intel for ${ev.sourceIp}`}
+              >
+                {ev.sourceIp}
+                <ExternalLink size={9} className="flex-shrink-0 opacity-0 group-hover:opacity-100" />
+              </button>
+
+              {/* Destination */}
+              <span className="text-[11px] text-fanos-muted truncate">{ev.dest}</span>
+
+              {/* Asset */}
+              <span className="text-[11px] text-fanos-muted truncate">{ev.asset}</span>
+
+              {/* AI Risk */}
+              <RiskBar value={ev.aiRisk} />
+
+              {/* Status */}
+              <span className={statusClass(ev.status)}>{ev.status}</span>
+
+              {/* Action */}
+              <span className="text-[11px] text-fanos-dim truncate">{ev.action}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Footer */}
       <div className="px-4 py-2.5 border-t border-white/[0.04] flex items-center justify-between">
         <span className="text-[11px] text-fanos-dim">
-          Showing {events.length} most recent events · 1,284 events/sec
+          Showing {events.length} most recent events · Sensor: Suricata IDS
         </span>
         <button className="fanos-btn text-[10px] py-1 px-2.5">View All Events</button>
       </div>

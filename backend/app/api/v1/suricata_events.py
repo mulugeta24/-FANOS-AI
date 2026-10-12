@@ -540,18 +540,9 @@ async def get_suricata_events(
         .order_by(SecurityEvent.created_at.desc())
         .limit(limit)
     )
-    if principal.role != "admin":
+    if principal.role not in ("admin", "analyst"):
         if not principal.organization:
             raise HTTPException(status_code=403, detail="Your account is not assigned to an organization")
-        # Organization filtering disabled - models not yet implemented
-        # query = query.where(
-        #     SecurityEvent.organization_id.in_(
-        #         select(Organization.id).where(
-        #             (func.lower(Organization.slug) == principal.organization.lower())
-        #             | (func.lower(Organization.name) == principal.organization.lower())
-        #         )
-        #     )
-        # )
     if severity:
         query = query.where(SecurityEvent.severity == severity.upper())
     result = await session.execute(query)
@@ -569,18 +560,9 @@ async def get_suricata_stats(
         SecurityEvent.sensor_source == "suricata",
         SecurityEvent.created_at >= cutoff,
     )
-    if principal.role != "admin":
+    if principal.role not in ("admin", "analyst"):
         if not principal.organization:
             raise HTTPException(status_code=403, detail="Your account is not assigned to an organization")
-        # Organization filtering disabled - models not yet implemented
-        # base = base.where(
-        #     SecurityEvent.organization_id.in_(
-        #         select(Organization.id).where(
-        #             (func.lower(Organization.slug) == principal.organization.lower())
-        #             | (func.lower(Organization.name) == principal.organization.lower())
-        #         )
-        #     )
-        # )
     total = (await session.execute(base)).scalar() or 0
     counts: dict[str, int] = {}
     for level in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):

@@ -32,7 +32,8 @@ class SecurityEventOut(BaseModel):
     ai_confidence: float
     risk_score:    int
     status:        str
-    sensor_source: Optional[str]
+    sensor_source: Optional[str] = None
+    raw_payload:   Optional[str] = None
     created_at:    datetime
 
     model_config = {"from_attributes": True}
@@ -49,10 +50,22 @@ class IncidentOut(BaseModel):
     source_ip:   str
     status:      str
     risk_score:  int
-    assigned_to: Optional[str]
+    assigned_to: Optional[str] = None
+    description: Optional[str] = None
     created_at:  datetime
 
     model_config = {"from_attributes": True}
+
+
+class IncidentCreate(BaseModel):
+    title:       str
+    threat:      str
+    severity:    str = "HIGH"
+    source_ip:   str
+    status:      str = "Open"
+    risk_score:  int = 75
+    assigned_to: Optional[str] = "SOC Analyst"
+    description: Optional[str] = None
 
 
 class IncidentUpdate(BaseModel):

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const API = 'http://localhost:8000/api/v1/sms'
+const API = '/api/v1/sms'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

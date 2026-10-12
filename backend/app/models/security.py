@@ -96,3 +96,52 @@ class User(Base):
     mfa_enabled = Column(Boolean, default=False)
     created_at  = Column(DateTime(timezone=True), default=now_utc)
     last_login  = Column(DateTime(timezone=True), nullable=True)
+
+
+class SensorLifecycle(Base):
+    __tablename__ = "sensor_lifecycles"
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    asset_id         = Column(UUID(as_uuid=True), nullable=True)
+    sensor_id        = Column(String(128), nullable=False, unique=True, index=True)
+    desired_state    = Column(String(32), nullable=False, default="STOPPED", index=True)
+    status           = Column(String(32), nullable=False, default="OFFLINE", index=True)
+    suricata_status  = Column(String(32), nullable=False, default="OFFLINE")
+    collector_status = Column(String(32), nullable=False, default="IDLE")
+    service_status   = Column(String(32), nullable=False, default="OFFLINE")
+    last_heartbeat   = Column(DateTime(timezone=True), nullable=True)
+    last_seen        = Column(DateTime(timezone=True), nullable=True)
+    suricata_pid     = Column(Integer, nullable=True)
+    collector_pid    = Column(Integer, nullable=True)
+    restart_count    = Column(Integer, nullable=False, default=0)
+    last_error       = Column(Text, nullable=True)
+    created_at       = Column(DateTime(timezone=True), default=now_utc)
+    updated_at       = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+
+
+class SensorCommand(Base):
+    __tablename__ = "sensor_commands"
+
+    id           = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sensor_id    = Column(String(128), nullable=False, index=True)
+    command      = Column(String(32), nullable=False)
+    requested_by = Column(String(128), nullable=False)
+    status       = Column(String(32), nullable=False, default="PENDING", index=True)
+    result       = Column(String(256), nullable=True)
+    created_at   = Column(DateTime(timezone=True), default=now_utc)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class SensorAuditLog(Base):
+    __tablename__ = "sensor_audit_logs"
+
+    id                     = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sensor_id              = Column(String(128), nullable=False, index=True)
+    admin_user             = Column(String(128), nullable=False)
+    action                 = Column(String(64), nullable=False)
+    previous_desired_state = Column(String(32), nullable=True)
+    new_desired_state      = Column(String(32), nullable=True)
+    result                 = Column(String(32), nullable=False, default="ACCEPTED")
+    details                = Column(Text, nullable=True)
+    created_at             = Column(DateTime(timezone=True), default=now_utc, index=True)
+

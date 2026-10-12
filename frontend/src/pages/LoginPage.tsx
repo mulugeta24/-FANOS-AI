@@ -9,35 +9,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, Shield, ChevronDown, ChevronUp } from 'lucide-react'
-
-// ── Demo credential store ─────────────────────────────────────
-// In production this is replaced by a real API call.
-const DEMO_USERS: Record<string, { full_name: string; email: string; role: 'admin' | 'analyst' | 'customer'; password: string }> = {
-  'fanos ai': {
-    full_name: 'FANOS AI Administrator',
-    email:     'admin@fanos.ai',
-    role:      'admin',
-    password:  'Fanos4561644@',
-  },
-  'mulugeta.ababi': {
-    full_name: 'Mulugeta Ababi',
-    email:     'mulugeta.ababi@fanos.ai',
-    role:      'admin',
-    password:  'FanosAdmin2026!',
-  },
-  'soc.analyst': {
-    full_name: 'SOC Analyst',
-    email:     'analyst@fanos.ai',
-    role:      'analyst',
-    password:  'SocAnalyst2026!',
-  },
-  'customer': {
-    full_name: 'Demo Customer',
-    email:     'customer@acme.com',
-    role:      'customer',
-    password:  'Customer2026!',
-  },
-}
+import { loginApi } from '@/lib/api'
 
 // ── Role → redirect destination ───────────────────────────────
 const ROLE_HOME: Record<string, string> = {
@@ -46,11 +18,11 @@ const ROLE_HOME: Record<string, string> = {
   customer: '/dashboard',
 }
 
-// ── Demo credential cards ──────────────────────────────────────
+// ── Demo credential cards (submits against backend /auth/login) ──
 const DEMO_HINTS = [
   { label: 'Admin Portal',        username: 'mulugeta.ababi', password: 'FanosAdmin2026!',  role: 'admin',    color: '#8b5cf6' },
   { label: 'Security Operations', username: 'soc.analyst',   password: 'SocAnalyst2026!',  role: 'analyst',  color: '#00c8ff' },
-  { label: 'Customer SOC',        username: 'customer',       password: 'Customer2026!',    role: 'customer', color: '#00e5a0' },
+  { label: 'System Admin',        username: 'fanos ai',       password: 'Fanos4561644@',    role: 'admin',    color: '#00e5a0' },
 ]
 
 export default function LoginPage() {
@@ -68,7 +40,7 @@ export default function LoginPage() {
     setError('')
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
@@ -79,29 +51,22 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    // Small artificial delay so it feels like a real login
-    setTimeout(() => {
-      const key  = username.trim().toLowerCase()
-      const user = DEMO_USERS[key]
+    try {
+      const res = await loginApi(username.trim(), password)
 
-      if (!user || user.password !== password) {
-        setError('Invalid username or password. Use the demo credentials below.')
-        setLoading(false)
-        return
-      }
+      // Persist real JWT token & verified user payload
+      localStorage.setItem('fanos_token', res.access_token)
+      localStorage.setItem('fanos_user', JSON.stringify(res.user))
 
-      // Persist user info for WorkspaceContext + UserMenu
-      localStorage.setItem('fanos_token', `demo-token-${key}-${Date.now()}`)
-      localStorage.setItem('fanos_user', JSON.stringify({
-        username:  key,
-        full_name: user.full_name,
-        email:     user.email,
-        role:      user.role,
-      }))
-
-      const destination = ROLE_HOME[user.role] ?? '/dashboard'
+      const userRole = res.user?.role || 'admin'
+      const destination = ROLE_HOME[userRole] ?? '/dashboard'
       navigate(destination, { replace: true })
-    }, 600)
+    } catch (err: any) {
+      const detail = err.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : 'Invalid username or password. Please verify credentials.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

@@ -9,6 +9,7 @@ import type {
   Sensor,
   ResponseAction,
   PreventionStatus,
+  BlockedIP,
   WebSecurityStats,
 } from '@/types'
 
@@ -42,14 +43,66 @@ export const getAttackDistribution = (): Promise<AttackDistributionItem[]> =>
 // ──────────────────────────────────────────────
 // Events
 // ──────────────────────────────────────────────
-export const getLiveEvents = (limit = 20): Promise<SecurityEvent[]> =>
-  client.get(`/events/live?limit=${limit}`).then((r) => r.data)
+export interface LiveEventsParams {
+  limit?: number
+  severity?: string
+  sensor_source?: string
+  search?: string
+}
+
+export const getLiveEvents = (params?: number | LiveEventsParams): Promise<SecurityEvent[]> => {
+  if (typeof params === 'number') {
+    return client.get(`/events/live?limit=${params}`).then((r) => r.data)
+  }
+  const q = new URLSearchParams()
+  if (params?.limit) q.set('limit', String(params.limit))
+  if (params?.severity) q.set('severity', params.severity)
+  if (params?.sensor_source) q.set('sensor_source', params.sensor_source)
+  if (params?.search) q.set('search', params.search)
+  const qs = q.toString() ? `?${q.toString()}` : ''
+  return client.get(`/events/live${qs}`).then((r) => r.data)
+}
+
+// ──────────────────────────────────────────────
+// Suricata Telemetry
+// ──────────────────────────────────────────────
+export interface SuricataStats {
+  total_events: number
+  alerts: number
+  critical: number
+  high: number
+  medium: number
+  low: number
+}
+
+export const getSuricataEvents = (limit = 50, hours = 24, severity?: string): Promise<SecurityEvent[]> => {
+  const q = new URLSearchParams({ limit: String(limit), hours: String(hours) })
+  if (severity) q.set('severity', severity)
+  return client.get(`/suricata/events?${q.toString()}`).then((r) => r.data)
+}
+
+export const getSuricataStats = (hours = 24): Promise<SuricataStats> =>
+  client.get(`/suricata/stats?hours=${hours}`).then((r) => r.data)
 
 // ──────────────────────────────────────────────
 // Incidents
 // ──────────────────────────────────────────────
 export const getActiveIncidents = (): Promise<Incident[]> =>
   client.get('/incidents/active').then((r) => r.data)
+
+export const getIncidents = (status?: string, search?: string): Promise<Incident[]> => {
+  const q = new URLSearchParams()
+  if (status && status !== 'ALL') q.set('status', status)
+  if (search && search.trim()) q.set('search', search.trim())
+  const qs = q.toString() ? `?${q.toString()}` : ''
+  return client.get(`/incidents${qs}`).then((r) => r.data)
+}
+
+export const createIncident = (data: Partial<Incident>): Promise<Incident> =>
+  client.post('/incidents', data).then((r) => r.data)
+
+export const updateIncident = (id: string, data: Partial<Incident>): Promise<Incident> =>
+  client.patch(`/incidents/${id}`, data).then((r) => r.data)
 
 // ──────────────────────────────────────────────
 // AI Engine
@@ -75,6 +128,15 @@ export const getResponseActions = (limit = 10): Promise<ResponseAction[]> =>
 export const getPreventionStatus = (): Promise<PreventionStatus> =>
   client.get('/prevention/status').then((r) => r.data)
 
+export const getBlockedIPs = (activeOnly = false): Promise<BlockedIP[]> =>
+  client.get(`/prevention/blocked-ips?active_only=${activeOnly}`).then((r) => r.data)
+
+export const blockIP = (data: { ip_address: string; reason: string }): Promise<BlockedIP> =>
+  client.post('/prevention/blocked-ips', data).then((r) => r.data)
+
+export const unblockIP = (ip_address: string): Promise<void> =>
+  client.delete(`/prevention/blocked-ips/${encodeURIComponent(ip_address)}`).then((r) => r.data)
+
 // ──────────────────────────────────────────────
 // Web Security
 // ──────────────────────────────────────────────
@@ -88,40 +150,48 @@ export const startURIAssessment = (uri: string, scope: string) =>
   client.post('/web-security/assess', { uri, scope }).then((r) => r.data)
 
 // ──────────────────────────────────────────────
+// Auth
+// ──────────────────────────────────────────────
+export interface LoginResponse {
+  access_token: string
+  token_type: string
+  expires_in: number
+  user: {
+    username: string
+    full_name: string
+    email: string
+    role: 'admin' | 'analyst' | 'customer'
+  }
+}
+
+export const loginApi = (username: string, password: string): Promise<LoginResponse> =>
+  client.post('/auth/login', { username, password }).then((r) => r.data)
+
+// ──────────────────────────────────────────────
 // Sensor Lifecycle Control
 // ──────────────────────────────────────────────
 export interface SensorLifecycleStatus {
-  id: string
-  name?: string
+  sensor_id: string
+  desired_state: string
   status: string
-  desired_state?: string
-  suricata_status?: string
-  collector_status?: string
-  service_status?: string
+  suricata_status: string
+  collector_status: string
+  service_status: string
   last_seen?: string
   last_heartbeat?: string
   restart_count?: number
   last_error?: string
+  message?: string
 }
 
 export const getSensorStatus = (sensorId: string): Promise<SensorLifecycleStatus> =>
-  client.get(`/infrastructure/sensors/${sensorId}/status`).then((r) => r.data).catch(() => ({
-    id: sensorId,
-    status: 'ONLINE',
-    desired_state: 'RUNNING',
-    suricata_status: 'RUNNING',
-    collector_status: 'RUNNING',
-    service_status: 'ACTIVE',
-    last_seen: new Date().toISOString(),
-    last_heartbeat: new Date().toISOString(),
-    restart_count: 0,
-  }))
+  client.get(`/sensors/${sensorId}/status`).then((r) => r.data)
 
 export const startSensor = (sensorId: string) =>
-  client.post(`/infrastructure/sensors/${sensorId}/start`).then((r) => r.data).catch(() => ({ status: 'ONLINE' }))
+  client.post(`/sensors/${sensorId}/start`).then((r) => r.data)
 
 export const stopSensor = (sensorId: string) =>
-  client.post(`/infrastructure/sensors/${sensorId}/stop`).then((r) => r.data).catch(() => ({ status: 'STOPPED' }))
+  client.post(`/sensors/${sensorId}/stop`).then((r) => r.data)
 
 export const restartSensor = (sensorId: string) =>
-  client.post(`/infrastructure/sensors/${sensorId}/restart`).then((r) => r.data).catch(() => ({ status: 'ONLINE' }))
+  client.post(`/sensors/${sensorId}/restart`).then((r) => r.data)

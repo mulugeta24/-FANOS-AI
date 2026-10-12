@@ -10,6 +10,7 @@ from app.api.v1 import (
     auth,
     sms,
     suricata_events,
+    sensors,
 )
 
 api_router = APIRouter()
@@ -24,3 +25,4 @@ api_router.include_router(web_security.router)
 api_router.include_router(infrastructure.router)
 api_router.include_router(sms.router)
 api_router.include_router(suricata_events.router)
+api_router.include_router(sensors.router)

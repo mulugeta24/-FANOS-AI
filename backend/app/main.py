@@ -66,11 +66,58 @@ async def root():
     })
 
 
+from datetime import datetime, timezone
+from sqlalchemy import text, select
+from app.db.base import AsyncSessionLocal
+from app.models.security import SecurityEvent
+from app.ai.model_loader import model_loader
+
+
 @app.get("/health", tags=["Health"])
 async def health():
+    db_status = "offline"
+    suricata_status = "idle"
+    suricata_last_seen = None
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+            db_status = "online"
+
+            latest_evt = (await session.execute(
+                select(SecurityEvent.created_at)
+                .where(SecurityEvent.sensor_source == "suricata")
+                .order_by(SecurityEvent.created_at.desc())
+                .limit(1)
+            )).scalar_one_or_none()
+
+            if latest_evt:
+                suricata_last_seen = latest_evt.isoformat()
+                now = datetime.now(timezone.utc)
+                if latest_evt.tzinfo is None:
+                    latest_evt = latest_evt.replace(tzinfo=timezone.utc)
+                if (now - latest_evt).total_seconds() < 7200:
+                    suricata_status = "active"
+                else:
+                    suricata_status = "idle"
+    except Exception as exc:
+        log.warning("Health check probe failed", error=str(exc))
+        db_status = "offline"
+
+    ml_ready = model_loader.is_ready()
+    ml_status = "loaded" if ml_ready else "degraded"
+
+    overall = "healthy" if (db_status == "online" and ml_ready) else "degraded"
+
     return {
-        "status":  "healthy",
+        "status": overall,
         "service": "FANOS AI Backend",
         "version": settings.APP_VERSION,
-        "ai_engine": "active",
+        "components": {
+            "backend": "online",
+            "database": db_status,
+            "suricata_collector": suricata_status,
+            "suricata_last_seen": suricata_last_seen,
+            "ml_engine": ml_status,
+        },
     }
+
