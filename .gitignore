@@ -29,13 +29,21 @@ Thumbs.db
 # Database / backups
 backups/
 *.sqlite3
+*.db
+*.sqlite
+
 
 # ML model artifacts
 *.joblib
 *.pkl
 *.h5
 *.model
+!backend/app/models/url_classifier/*.pkl
+!ml/models/url_classifier/*.pkl
 
 # IDE/editor
 .vscode/
 .idea/
+
+# Standalone subprojects / repositories
+fanos-waf/

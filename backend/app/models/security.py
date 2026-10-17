@@ -96,3 +96,79 @@ class User(Base):
     mfa_enabled = Column(Boolean, default=False)
     created_at  = Column(DateTime(timezone=True), default=now_utc)
     last_login  = Column(DateTime(timezone=True), nullable=True)
+
+
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name       = Column(String(128), nullable=False)
+    slug       = Column(String(128), nullable=False, unique=True, index=True)
+    is_active  = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), default=now_utc, index=True)
+
+
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id    = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True)
+    name               = Column(String(256), nullable=False)
+    asset_type         = Column(String(32), nullable=False, default="OTHER")
+    ip_address         = Column(String(64), nullable=False, index=True)
+    hostname           = Column(String(256), nullable=True)
+    description        = Column(Text, nullable=True)
+    environment        = Column(String(32), nullable=False, default="LAB")
+    status             = Column(String(32), nullable=False, default="PENDING", index=True)
+    monitoring_enabled = Column(Boolean, nullable=False, default=False, index=True)
+    sensor_id          = Column(String(128), nullable=True)
+    created_at         = Column(DateTime(timezone=True), default=now_utc, index=True)
+    updated_at         = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+
+
+class SensorLifecycle(Base):
+    __tablename__ = "sensor_lifecycles"
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    asset_id         = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, unique=True, index=True)
+    sensor_id        = Column(String(128), nullable=False, unique=True, index=True)
+    desired_state    = Column(String(32), nullable=False, default="STOPPED", index=True)
+    status           = Column(String(32), nullable=False, default="OFFLINE", index=True)
+    suricata_status  = Column(String(32), nullable=False, default="OFFLINE")
+    collector_status = Column(String(32), nullable=False, default="IDLE")
+    service_status   = Column(String(32), nullable=False, default="OFFLINE")
+    last_heartbeat   = Column(DateTime(timezone=True), nullable=True)
+    last_seen        = Column(DateTime(timezone=True), nullable=True)
+    suricata_pid     = Column(Integer, nullable=True)
+    collector_pid    = Column(Integer, nullable=True)
+    restart_count    = Column(Integer, nullable=False, default=0, index=True)
+    last_error       = Column(Text, nullable=True)
+    created_at       = Column(DateTime(timezone=True), default=now_utc, index=True)
+    updated_at       = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+
+
+class SensorCommand(Base):
+    __tablename__ = "sensor_commands"
+
+    id           = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sensor_id    = Column(String(128), nullable=False, index=True)
+    command      = Column(String(32), nullable=False, index=True)
+    requested_by = Column(String(128), nullable=False, index=True)
+    status       = Column(String(32), nullable=False, default="PENDING", index=True)
+    result       = Column(String(256), nullable=True)
+    created_at   = Column(DateTime(timezone=True), default=now_utc, index=True)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class SensorAuditLog(Base):
+    __tablename__ = "sensor_audit_logs"
+
+    id                     = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sensor_id              = Column(String(128), nullable=False, index=True)
+    admin_user             = Column(String(128), nullable=False, index=True)
+    action                 = Column(String(64), nullable=False, index=True)
+    previous_desired_state = Column(String(32), nullable=True)
+    new_desired_state      = Column(String(32), nullable=True)
+    result                 = Column(String(32), nullable=False, default="ACCEPTED", index=True)
+    details                = Column(Text, nullable=True)
+    created_at             = Column(DateTime(timezone=True), default=now_utc, index=True)

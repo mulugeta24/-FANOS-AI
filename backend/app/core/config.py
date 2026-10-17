@@ -40,6 +40,9 @@ class Settings(BaseSettings):
 
     # Suricata Collector Authentication
     SURICATA_INGEST_TOKEN: str = ""
+    FANOS_SENSOR_TOKEN: str = ""
+    VT_API_KEY: str = ""
+
     
     # Suricata Correlation Configuration
     FANOS_SURICATA_CORRELATION_WINDOW_SECONDS: int = 300

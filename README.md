@@ -1,75 +1,72 @@
-# FANOS AI — Enterprise Cybersecurity Intelligence Platform
+# FANOS AI — Unified AI-Powered Cybersecurity Platform
 
-FANOS AI is a cybersecurity operations platform designed for monitoring, detecting, assessing, and responding to threats across web, network, and system surfaces. The repository contains the current working application and keeps future platform expansion modules as clearly separated architectural boundaries.
+FANOS AI is a unified, production-oriented cybersecurity operations and threat intelligence platform designed for monitoring, detecting, assessing, and responding to threats across web, network, system, and URL threat surfaces. The platform natively integrates real-time ML-powered malicious URL classification, VirusTotal threat intelligence enrichment, dynamic web vulnerability scanning, network intrusion detection (Suricata/Zeek), Web Application Firewall (WAF) reverse-proxy enforcement, customer security protection, and SOC operations.
 
+> Canonical Repository: [https://github.com/mulugeta24/-FANOS-AI](https://github.com/mulugeta24/-FANOS-AI)
 > Author: Mulugeta Ababi
+> Primary Browser Entry Point: [http://localhost:3000](http://localhost:3000)
 
-## Architecture overview
+---
+
+## Unified Architecture Overview
 
 ```text
-FANOS AI PLATFORM
-├── Frontend
-│   └── React + TypeScript + Vite
-├── Backend / FANOS Core
-│   └── FastAPI + SQLAlchemy + Alembic
-├── Security Engines
-│   ├── WAF
-│   ├── Network IDS
-│   ├── Network IPS
-│   ├── EDR
-│   ├── Vulnerability Scanner
-│   └── Malware Analysis
+FANOS AI PLATFORM (Single Origin: http://localhost:3000)
+├── Frontend (React + TypeScript + Vite)
+│   ├── Unified Dashboard, SecOps Portal & Customer Protection
+│   ├── ML URL Threat Detection (/threat-detection)
+│   ├── Web Security Assessment (/web/assessment)
+│   └── Reverse Proxy: /api/* -> Backend (http://localhost:8000)
+├── Backend / FANOS Core (FastAPI + SQLAlchemy + AsyncPG)
+│   ├── Authentication & Role-Based Access Control (JWT)
+│   ├── ML Threat Detection Engine (17-Feature XGBoost Classifier)
+│   ├── VirusTotal Threat Intelligence Integration (24h Cache)
+│   ├── Dynamic Web Security Vulnerability Scanner
+│   ├── Incident Management, Risk Engine & Correlation
+│   └── Sensor Bridge (Suricata, Zeek NSM, Network Flow IDS)
+├── Security Engines & Reverse Proxies
+│   ├── FANOS WAF Management API (Port 8001)
+│   ├── FANOS WAF Inline Traffic Proxy (Port 8002)
+│   └── Suricata / Zeek Sensors & Normalizers
 ├── Integrations
-│   ├── Cloud
-│   ├── Firewall
-│   ├── Endpoint Security
-│   ├── SIEM
-│   ├── Identity
-│   └── Threat Intelligence
-├── AI / ML
-│   ├── Current runtime AI engine
-│   └── Future ML lifecycle
-├── Database
-├── Infrastructure
-├── Testing
-└── Documentation
+│   ├── Telegram Threat Intelligence Bot (integrations/telegram_bot/)
+│   └── External Threat Feeds & VirusTotal v3 API
+├── Database Layer (PostgreSQL 15+ & Redis 7+)
+│   ├── Users, Roles & Authentication
+│   ├── Incidents, Events & Prevention Actions
+│   └── Scans (scans), VT Cache (vt_cache), Reports (user_reports), Stats (stats)
+└── ML Models
+    ├── URL Classifier (models/url_classifier/ml_model.pkl & label_encoder.pkl)
+    └── Network Threat Model (models/fanos_v3_xgboost_rare_improved.json)
 ```
 
-The security-engine and integration directories are architectural/future-boundary folders and are not full production implementations unless explicitly added later.
+---
 
-## Current runtime architecture
+## Unified Features & Services
 
-### Frontend
-- React + TypeScript + Vite app under [frontend](frontend)
-- Dashboard, landing, authentication, detection, infrastructure, and prevention pages under [frontend/src](frontend/src)
-- Reusable UI components under [frontend/src/components](frontend/src/components)
-- App logic in [frontend/src/hooks](frontend/src/hooks), [frontend/src/lib](frontend/src/lib), and [frontend/src/pages](frontend/src/pages)
+### 1. ML URL Threat Detection & VirusTotal Intelligence
+- **Multi-Class URL Classifier:** Classifies arbitrary URLs into **Benign**, **Defacement**, **Malicious**, or **Phishing**.
+- **17 Lexical & Structural Features:** Exact feature extraction schema matching original training pipeline:
+  1. `url_length`, 2. `domain_length`, 3. `path_length`, 4. `query_length`, 5. `count_dots`,
+  6. `count_hyphens`, 7. `count_underscores`, 8. `count_slashes`, 9. `count_digits`, 10. `count_letters`,
+  11. `has_ip`, 12. `is_https`, 13. `count_subdomains`, 14. `has_at_symbol`, 15. `has_query`,
+  16. `entropy`, 17. `has_suspicious_tld`.
+- **VirusTotal v3 Enrichment:** Server-side asynchronous threat lookup with 24-hour cache in PostgreSQL (`vt_cache`).
+- **Hybrid Decision Engine:** Two-tiered consensus where authoritative VT malicious detections elevate verdicts, and fallback ML confidence scoring evaluates probability distributions.
+- **Analyst Feedback / Dispute Reporting:** Users and security analysts can dispute classifications; records are logged in `user_reports` for model retraining and audit.
 
-### Backend / FANOS Core
-- FastAPI application under [backend/app](backend/app)
-- AI logic under [backend/app/ai](backend/app/ai)
-- API routes under [backend/app/api](backend/app/api)
-- Models and schemas under [backend/app/models](backend/app/models) and [backend/app/schemas](backend/app/schemas)
-- Configuration and security settings under [backend/app/core](backend/app/core)
+### 2. Web Vulnerability Scanner
+- Native vulnerability assessment scanner ported into `backend/app/services/scanner/`.
+- Strict Server-Side Request Forgery (SSRF) validation restricting scans of internal loopback, private IP ranges (RFC 1918), and link-local addresses.
+- Multi-threaded vulnerability testing for SQLi, XSS, open redirects, missing security headers, and outdated technologies.
 
-### Runtime AI and detection flow
-- Current AI runtime location: [backend/app/ai](backend/app/ai)
-- AI engine entry: [backend/app/ai/engine.py](backend/app/ai/engine.py)
-- Rule engine: [backend/app/ai/rule_engine.py](backend/app/ai/rule_engine.py)
-- Risk engine: [backend/app/ai/risk_engine.py](backend/app/ai/risk_engine.py)
-- Correlation engine: [backend/app/ai/correlation_engine.py](backend/app/ai/correlation_engine.py)
-- Current model: [backend/app/models/fanos_v3_xgboost_rare_improved (1).json](backend/app/models/fanos_v3_xgboost_rare_improved%20(1).json)
+### 3. Telegram Threat Intelligence Bot
+- Located in [integrations/telegram_bot/telegram_bot.py](integrations/telegram_bot/telegram_bot.py).
+- Allows remote analysts and mobile users to submit URLs in Telegram and receive immediate 17-feature breakdown and VirusTotal verdicts.
 
-### Future modular components
-The following directories exist as architectural and future expansion boundaries:
-- [security-engines](security-engines)
-- [integrations](integrations)
-- [ml](ml)
-- [database](database)
-- [infrastructure](infrastructure)
-- [tests](tests)
-- [scripts](scripts)
-- [configs](configs)
+### 4. Enterprise SecOps, WAF & Network IDS
+- Native Suricata EVE.json and Zeek NSM batch parsers.
+- Network Flow IDS and WAF inline traffic interception on Port 8002.
 
 ## Repository structure
 
@@ -253,6 +250,49 @@ The actual API routes defined in the backend are:
 | GET | /api/v1/sms/messages | [backend/app/api/v1/sms.py](backend/app/api/v1/sms.py) |
 | GET | /api/v1/sms/settings | [backend/app/api/v1/sms.py](backend/app/api/v1/sms.py) |
 | PUT | /api/v1/sms/settings | [backend/app/api/v1/sms.py](backend/app/api/v1/sms.py) |
+| POST | /api/v1/threat-detection/analyze | [backend/app/api/v1/threat_detection.py](backend/app/api/v1/threat_detection.py) |
+| GET | /api/v1/threat-detection/scans | [backend/app/api/v1/threat_detection.py](backend/app/api/v1/threat_detection.py) |
+| GET | /api/v1/threat-detection/stats | [backend/app/api/v1/threat_detection.py](backend/app/api/v1/threat_detection.py) |
+| POST | /api/v1/threat-detection/report | [backend/app/api/v1/threat_detection.py](backend/app/api/v1/threat_detection.py) |
+| POST | /api/v1/scanner/validate | [backend/app/api/v1/scanner.py](backend/app/api/v1/scanner.py) |
+| POST | /api/v1/scanner/start | [backend/app/api/v1/scanner.py](backend/app/api/v1/scanner.py) |
+| POST | /api/scan | [backend/app/main.py](backend/app/main.py) *(Legacy FANOS-CYBERSEC bridge)* |
+| GET | /api/scans | [backend/app/main.py](backend/app/main.py) *(Legacy FANOS-CYBERSEC bridge)* |
+| POST | /api/report | [backend/app/main.py](backend/app/main.py) *(Legacy FANOS-CYBERSEC bridge)* |
+| GET | /api/stats | [backend/app/main.py](backend/app/main.py) *(Legacy FANOS-CYBERSEC bridge)* |
+| GET | /api/public/stats | [backend/app/main.py](backend/app/main.py) *(Legacy FANOS-CYBERSEC bridge)* |
+
+## Unified Service & Port Mapping
+
+| Service | Port | Description | Access / URL |
+|---------|------|-------------|--------------|
+| **Unified Frontend** | `3000` | Primary React + Vite SPA, SOC dashboards, & URL threat detection | [http://localhost:3000](http://localhost:3000) |
+| **Backend Core API** | `8000` | FastAPI, ML URL detection engine, VT intelligence & DB | [http://localhost:8000](http://localhost:8000) (Proxied via `:3000/api`) |
+| **FANOS WAF Management** | `8001` | Deterministic WAF rule configuration & alerts API | [http://127.0.0.1:8001](http://127.0.0.1:8001) |
+| **FANOS WAF Frontend** | `3001` | Dedicated WAF management dashboard | [http://localhost:3001](http://localhost:3001) |
+| **WAF Reverse Proxy** | `8002` | Inline traffic proxy inspecting HTTP streams | [http://127.0.0.1:8002](http://127.0.0.1:8002) |
+| **PostgreSQL** | `5432` | Relational storage for users, incidents, scans & VT cache | `localhost:5432` |
+| **Redis** | `6379` | Fast key-value store for rate limiting and cache | `localhost:6379` |
+| **Telegram Threat Bot** | Dynamic | Async polling bot connected to unified ML threat engine | `integrations/telegram_bot/` |
+
+## Automated Verification & Testing
+
+Run full backend test suite:
+```bash
+& "backend\.venv\Scripts\pytest.exe" tests/backend/ tests/api/
+```
+All 33 automated tests cover:
+- Infrastructure and sensor control bridge (`test_infrastructure.py`, `test_sensor_control_bridge.py`)
+- Zeek collectors, normalizers, and batch parsers (`test_collector.py`, `test_normalizer.py`, `test_parser.py`)
+- 17-feature extraction and XGBoost URL classifier (`test_url_detector.py`)
+- URL threat detection API, validation, VirusTotal fallbacks, dispute submission, and stats (`test_threat_detection_api.py`)
+
+Run frontend production build verification:
+```bash
+cd frontend
+npm run build
+```
+Builds cleanly with zero TypeScript or packaging errors into `frontend/dist/`.
 
 ## Environment templates
 

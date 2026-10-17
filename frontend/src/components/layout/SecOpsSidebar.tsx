@@ -57,10 +57,14 @@ const EXPANDABLE: ExpandableGroup[] = [
     color:    '#00e5a0',
     basePath: '/secops/web',
     items: [
-      { label: 'WAF', to: '/secops/web/waf', icon: <span className="text-[10px] font-bold">W</span> },
+      { label: 'WAF',                  to: '/secops/web/waf',              icon: <span className="text-[10px] font-bold">W</span> },
+      { label: 'URL Threat Detection', to: '/secops/web/threat-detection', icon: <span className="text-[10px] font-bold">U</span>, badge: 'ML' },
+      { label: 'Web Scanner',          to: '/secops/web/scanner',          icon: <span className="text-[10px] font-bold">WS</span>, badge: 'DAST' },
     ],
   },
+
 ]
+
 
 const TOP_NAV: NavItem[] = [
   { label: 'SOC Overview',      to: '/secops/overview',    icon: <LayoutDashboard size={15} />, exact: true },
