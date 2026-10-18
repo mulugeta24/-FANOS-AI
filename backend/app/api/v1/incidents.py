@@ -101,7 +101,8 @@ async def get_active_incidents(
     return list(result.scalars().all())
 
 
-@router.get("/", response_model=List[IncidentOut])
+@router.get("", response_model=List[IncidentOut])
+@router.get("/", response_model=List[IncidentOut], include_in_schema=False)
 async def list_incidents(
     status_filter: Optional[str] = Query(default=None, alias="status"),
     search: Optional[str] = Query(default=None),
@@ -127,7 +128,8 @@ async def list_incidents(
     return list(result.scalars().all())
 
 
-@router.post("/", response_model=IncidentOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=IncidentOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=IncidentOut, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def create_incident(
     body: IncidentCreate,
     session: AsyncSession = Depends(get_async_session),

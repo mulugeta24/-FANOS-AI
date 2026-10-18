@@ -4,6 +4,7 @@ Web Security API — URI assessment, web stats, findings.
 import time
 import random
 from typing import List
+from urllib.parse import unquote
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -54,9 +55,12 @@ async def assess_uri(body: URIAssessmentRequest) -> URIAssessmentResult:
 
     t_start = time.perf_counter()
 
-    # Run rule engine against the URI path
-    path = body.uri.split("://", 1)[-1].split("/", 1)[-1] if "/" in body.uri else ""
-    matches = rule_engine.evaluate_all(f"/{path}")
+    # Run rule engine against the URI path (evaluate both decoded and raw path)
+    raw_path = body.uri.split("://", 1)[-1].split("/", 1)[-1] if "/" in body.uri else ""
+    decoded_path = unquote(f"/{raw_path}")
+    matches = rule_engine.evaluate_all(decoded_path)
+    if not matches and decoded_path != f"/{raw_path}":
+        matches = rule_engine.evaluate_all(f"/{raw_path}")
 
     duration = (time.perf_counter() - t_start) * 1000
 
