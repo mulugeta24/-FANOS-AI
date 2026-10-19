@@ -58,11 +58,44 @@ const sensorColor: Record<string, string> = {
 }
 
 function mapWafEventToSecEvent(waf: WAFSecurityEvent): SecEvent {
+  const isXSS = Boolean(
+    waf.findings?.some(f => 
+      f.category?.toLowerCase().includes('script') || 
+      f.category?.toLowerCase().includes('xss') ||
+      f.rule_id?.toUpperCase().includes('XSS') ||
+      f.rule_name?.toLowerCase().includes('xss')
+    ) ||
+    waf.path?.toLowerCase().includes('<script') ||
+    (waf.query_sanitized && JSON.stringify(waf.query_sanitized).toLowerCase().includes('<script'))
+  )
+  const isSQLi = Boolean(
+    waf.findings?.some(f =>
+      f.category?.toLowerCase().includes('sql') ||
+      f.rule_id?.toUpperCase().includes('SQL') ||
+      f.rule_name?.toLowerCase().includes('sql')
+    ) ||
+    waf.path?.toLowerCase().includes('union') ||
+    waf.path?.toLowerCase().includes('select')
+  )
+  const hasCriticalFinding = Boolean(
+    waf.findings?.some(f => (f.severity || '').toUpperCase() === 'CRITICAL')
+  )
+
   let sev: EvSev = 'INFO'
-  if (waf.risk_score >= 75) sev = 'CRITICAL'
-  else if (waf.risk_score >= 50) sev = 'HIGH'
-  else if (waf.risk_score >= 25) sev = 'MEDIUM'
-  else if (waf.risk_score > 0) sev = 'LOW'
+  if (
+    waf.risk_score >= 75 ||
+    hasCriticalFinding ||
+    isXSS ||
+    (waf.decision === 'BLOCK' && (isSQLi || isXSS || waf.risk_score >= 50))
+  ) {
+    sev = 'CRITICAL'
+  } else if (waf.risk_score >= 50 || waf.findings?.some(f => (f.severity || '').toUpperCase() === 'HIGH')) {
+    sev = 'HIGH'
+  } else if (waf.risk_score >= 25 || waf.findings?.some(f => (f.severity || '').toUpperCase() === 'MEDIUM')) {
+    sev = 'MEDIUM'
+  } else if (waf.risk_score > 0) {
+    sev = 'LOW'
+  }
 
   let status = 'ALLOWED'
   if (waf.decision === 'BLOCK') status = 'BLOCKED'
@@ -71,7 +104,13 @@ function mapWafEventToSecEvent(waf: WAFSecurityEvent): SecEvent {
   const attackType =
     waf.findings?.[0]?.rule_name ||
     waf.findings?.[0]?.description ||
-    (waf.risk_score > 0 ? 'Suspicious Request' : 'Normal Traffic')
+    (isXSS
+      ? 'XSS: Cross-Site Scripting Injection Detected'
+      : isSQLi
+      ? 'SQL Injection Attack Detected'
+      : waf.risk_score > 0
+      ? 'Suspicious Request'
+      : 'Normal Traffic')
 
   const targetPath = waf.hostname ? `${waf.hostname}${waf.path}` : waf.path
 

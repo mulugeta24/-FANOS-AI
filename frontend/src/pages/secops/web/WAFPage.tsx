@@ -219,7 +219,7 @@ export default function WAFPage() {
               borderColor: isLiveConnected ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)',
               color: isLiveConnected ? '#34d399' : '#fbbf24',
             }}
-            title="WAF Ingress Daemon on 127.0.0.1:8001 / 8002"
+            title="WAF Unified Engine on 127.0.0.1:8000 / 8002"
           >
             <span
               className={`w-2 h-2 rounded-full ${
@@ -227,7 +227,7 @@ export default function WAFPage() {
               }`}
             />
             <span className="font-semibold tracking-tight">
-              {isLiveConnected ? 'LIVE (8001)' : 'SYNCING'}
+              {isLiveConnected ? 'LIVE (8000)' : 'SYNCING'}
             </span>
           </div>
 

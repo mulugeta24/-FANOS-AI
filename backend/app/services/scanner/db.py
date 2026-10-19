@@ -32,8 +32,8 @@ def get_pg_pool():
                         host="localhost",
                         port=5432,
                         dbname="fanos_db",
-                        user="fanos",
-                        password="fanos_pass"
+                        user="postgres",
+                        password="postgres"
                     )
     return _pg_pool
 

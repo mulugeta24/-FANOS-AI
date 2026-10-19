@@ -28,13 +28,27 @@ from app.api.v1.threat_detection import (
 settings = get_settings()
 
 
+from app.waf.api.v1 import api_router as waf_api_router
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging(debug=settings.DEBUG)
     log.info("FANOS AI starting", version=settings.APP_VERSION, env=settings.APP_ENV)
     await init_tables()
+    try:
+        from app.waf.init_db import init_waf_db
+        await init_waf_db()
+        log.info("FANOS WAF engine initialized and seed data verified")
+    except Exception as e:
+        log.warning("FANOS WAF DB initialization notice", error=str(e))
     yield
     log.info("FANOS AI shutting down")
+    try:
+        from app.waf.proxy.reverse_proxy import proxy_engine
+        await proxy_engine.aclose()
+    except Exception:
+        pass
 
 
 app = FastAPI(
@@ -65,6 +79,8 @@ app.add_middleware(
 
 # ── Routes ─────────────────────────────────────────────────────
 app.include_router(api_router, prefix=settings.API_PREFIX)
+app.include_router(waf_api_router, prefix="/waf-api", tags=["WAF Direct API"])
+
 
 
 # ── Root & Health ──────────────────────────────────────────────

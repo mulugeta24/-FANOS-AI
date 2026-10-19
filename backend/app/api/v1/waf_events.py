@@ -264,10 +264,10 @@ async def ingest_waf_events_batch(
 
 
 # ──────────────────────────────────────────────────────────────
-# GET: WAF Events
+# GET: WAF Raw Events (Legacy Ingest Stream)
 # ──────────────────────────────────────────────────────────────
 @router.get(
-    "/events",
+    "/raw-events",
     response_model=List[SecurityEventOut],
     summary="Get WAF Security Events",
 )
@@ -285,12 +285,12 @@ async def get_waf_events(
         
         query = (
             select(SecurityEvent)
-            .options(selectinload(SecurityEvent.asset))
             .where(SecurityEvent.sensor_source == "waf")
             .where(SecurityEvent.created_at >= cutoff)
             .order_by(SecurityEvent.created_at.desc())
             .limit(limit)
         )
+
         
         if severity:
             query = query.where(SecurityEvent.severity == severity.upper())
@@ -310,10 +310,10 @@ async def get_waf_events(
 
 
 # ──────────────────────────────────────────────────────────────
-# GET: WAF Stats
+# GET: WAF Raw Stats
 # ──────────────────────────────────────────────────────────────
 @router.get(
-    "/stats",
+    "/raw-stats",
     response_model=WAFEventStats,
     summary="Get WAF Statistics",
 )

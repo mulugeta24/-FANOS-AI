@@ -32,8 +32,8 @@ export const setWafAuthToken = (token: string | null) => {
   }
 };
 
-// Initialize token from storage
-const storedToken = localStorage.getItem('fanos_waf_token');
+// Initialize token from storage (supporting unified fanos_token or dedicated fanos_waf_token)
+const storedToken = localStorage.getItem('fanos_waf_token') || localStorage.getItem('fanos_token');
 if (storedToken) {
   setWafAuthToken(storedToken);
 }
@@ -50,13 +50,15 @@ export const wafLogin = async (username: string = 'admin', password: string = 'C
 
 // Auto-authenticate helper to seamlessly load authenticated endpoints
 export const ensureWafAuth = async (force: boolean = false) => {
-  const current = localStorage.getItem('fanos_waf_token');
+  const current = localStorage.getItem('fanos_waf_token') || localStorage.getItem('fanos_token');
   if (force || !current) {
     try {
       await wafLogin();
     } catch (err) {
       console.warn('WAF auto-login failed:', err);
     }
+  } else if (!wafClient.defaults.headers.common['Authorization']) {
+    setWafAuthToken(current);
   }
 };
 

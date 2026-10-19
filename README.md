@@ -266,12 +266,10 @@ The actual API routes defined in the backend are:
 
 | Service | Port | Description | Access / URL |
 |---------|------|-------------|--------------|
-| **Unified Frontend** | `3000` | Primary React + Vite SPA, SOC dashboards, & URL threat detection | [http://localhost:3000](http://localhost:3000) |
-| **Backend Core API** | `8000` | FastAPI, ML URL detection engine, VT intelligence & DB | [http://localhost:8000](http://localhost:8000) (Proxied via `:3000/api`) |
-| **FANOS WAF Management** | `8001` | Deterministic WAF rule configuration & alerts API | [http://127.0.0.1:8001](http://127.0.0.1:8001) |
-| **FANOS WAF Frontend** | `3001` | Dedicated WAF management dashboard | [http://localhost:3001](http://localhost:3001) |
-| **WAF Reverse Proxy** | `8002` | Inline traffic proxy inspecting HTTP streams | [http://127.0.0.1:8002](http://127.0.0.1:8002) |
-| **PostgreSQL** | `5432` | Relational storage for users, incidents, scans & VT cache | `localhost:5432` |
+| **FANOS AI SOC Dashboard** | `3000` | Unified Browser Entry Point: SOC Overview, Threat Detection & Integrated WAF Console (`/secops/web/waf`) | [http://localhost:3000](http://localhost:3000) |
+| **FANOS AI Unified Backend API** | `8000` | FastAPI, ML Threat Classifier, Suricata/Zeek Ingestion & Integrated WAF API (`/api/v1/waf`) | [http://localhost:8000](http://localhost:8000) (Docs: `/api/docs`) |
+| **FANOS WAF Traffic Proxy** | `8002` | Inline reverse proxy inspecting HTTP streams & real-time enforcement | [http://127.0.0.1:8002](http://127.0.0.1:8002) |
+| **PostgreSQL** | `5432` | Unified relational storage for users, incidents, scans, WAF rules & domains | `localhost:5432` |
 | **Redis** | `6379` | Fast key-value store for rate limiting and cache | `localhost:6379` |
 | **Telegram Threat Bot** | Dynamic | Async polling bot connected to unified ML threat engine | `integrations/telegram_bot/` |
 

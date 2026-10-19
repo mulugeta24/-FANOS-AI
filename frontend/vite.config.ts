@@ -18,9 +18,9 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/waf-api': {
-        target: 'http://127.0.0.1:8001',
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/waf-api/, '/api/v1'),
+        rewrite: (path) => path.replace(/^\/waf-api/, '/api/v1/waf'),
       },
     },
   },

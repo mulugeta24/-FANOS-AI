@@ -12,7 +12,9 @@ from app.api.v1 import (
     suricata_events,
     threat_detection,
     scanner,
+    waf_events,
 )
+from app.waf.api.v1 import api_router as waf_api_router
 
 api_router = APIRouter()
 
@@ -27,4 +29,8 @@ api_router.include_router(threat_detection.router)
 api_router.include_router(scanner.router)
 api_router.include_router(infrastructure.router)
 api_router.include_router(sms.router)
-api_router.include_router(suricata_events.router)
+api_router.include_router(waf_api_router, prefix="/waf")
+api_router.include_router(waf_events.router)
+
+
+

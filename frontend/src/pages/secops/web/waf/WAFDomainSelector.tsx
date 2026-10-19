@@ -1159,7 +1159,7 @@ export const WAFDomainSelector: React.FC<WAFDomainSelectorProps> = ({
                   <div className="text-[11px] leading-relaxed text-slate-400">
                     Point your public domain CNAME or A-record to the FANOS WAF edge proxy. Traffic path:
                     <span className="block font-mono text-[10px] text-cyan-200 mt-1 bg-black/40 p-1.5 rounded">
-                      Client &rarr; FANOS WAF (Port 8001 / 8002) &rarr; Inspection Engine &rarr; {createdDomain.origin_url}
+                      Client &rarr; FANOS WAF (Port 8000 / 8002) &rarr; Inspection Engine &rarr; {createdDomain.origin_url}
                     </span>
                   </div>
                 </div>

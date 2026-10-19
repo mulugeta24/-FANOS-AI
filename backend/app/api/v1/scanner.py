@@ -21,7 +21,6 @@ from app.services.scanner.models import (
     get_scan_findings, get_finding_by_id, update_finding_status
 )
 from app.services.scanner.reporting.json_report import generate_json_report
-from app.services.scanner.reporting.pdf_report import generate_pdf_report
 from app.core.logging import log
 
 router = APIRouter(prefix="/scanner", tags=["Web Security Scanner"])
@@ -201,7 +200,14 @@ async def get_job_pdf_report(job_id: str):
     urls = get_scan_urls(job_id)
     findings = get_scan_findings(job_id)
 
-    pdf_buffer = generate_pdf_report(job, assets, technologies, urls, findings)
+    try:
+        from app.services.scanner.reporting.pdf_report import generate_pdf_report
+        pdf_buffer = generate_pdf_report(job, assets, technologies, urls, findings)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"PDF report generation is unavailable: {exc}",
+        )
     pdf_buffer.seek(0)
 
     domain = (job.get("target_domain") or "target").replace(".", "_")

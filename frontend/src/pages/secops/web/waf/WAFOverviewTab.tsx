@@ -343,7 +343,7 @@ export const WAFOverviewTab: React.FC<WAFOverviewTabProps> = ({
                     isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
                   }`}
                 />
-                {isLiveConnected ? 'LIVE SYNC (8001)' : 'SYNCING'}
+                {isLiveConnected ? 'LIVE SYNC (8000)' : 'SYNCING'}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
