@@ -1,0 +1,51 @@
+import { Domain, StatsSummary } from '@/types/waf';
+
+export const DEFAULT_WAF_DOMAINS: Domain[] = [
+  {
+    id: '9f095261-ca37-4641-a4a6-04a8a6347593',
+    tenant_id: 'org-default',
+    domain_name: 'fanos-sec.vercel.app',
+    hostname: 'fanos-sec.vercel.app',
+    subdomains: ['sec.fanos.ai', 'api.fanos-sec.vercel.app'],
+    origin_url: 'https://fanossec.onrender.com',
+    environment: 'production',
+    target_type: 'production',
+    enforcement_mode: 'block',
+    verification_status: 'verified',
+    verification_token: 'fanos-waf-verify-prod-9f095261',
+    verified_at: '2026-10-15T10:00:00Z',
+    is_active: true,
+    ssl_enabled: true,
+    ssl_mode: 'strict',
+    tls_status: 'valid',
+    proxy_status: 'configured',
+    health_status: 'healthy',
+    traffic_verified: true,
+    protection_status: 'PROTECTION_ACTIVE',
+    dns_txt_record_name: '_fanos-challenge.fanos-sec.vercel.app',
+    dns_txt_record_value: 'fanos-waf-verify-prod-9f095261',
+    created_at: '2026-10-15T10:00:00Z',
+  },
+];
+
+export const DEFAULT_WAF_STATS: StatsSummary = {
+  total_inspected: 0,
+  total_allowed: 0,
+  total_monitored: 0,
+  total_blocked: 0,
+  active_rules_count: 32,
+  custom_rules_count: 0,
+  current_mode: 'block',
+  total_domains: 1,
+  verified_domains: 1,
+  active_domains: 1,
+  severity_distribution: {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    info: 0,
+  },
+  top_attack_categories: [],
+  recent_activity_timeline: [],
+};

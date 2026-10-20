@@ -9,6 +9,7 @@ uvicorn[standard]>=0.29.0
 # Latest pydantic ships py3.14 wheels — use >= here.
 pydantic>=2.7.1
 pydantic-settings>=2.2.1
+email-validator>=2.0.0
 python-multipart>=0.0.9
 python-dotenv>=1.0.1
 

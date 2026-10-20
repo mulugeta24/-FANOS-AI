@@ -33,6 +33,28 @@ class SecurityEvent(Base):
     sensor_source  = Column(String(64), nullable=True)   # suricata|zeek|waf|wazuh
     created_at     = Column(DateTime(timezone=True), default=now_utc, index=True)
 
+    # WAF Telemetry Fields
+    request_id     = Column(String(64), nullable=True, index=True)
+    method         = Column(String(16), nullable=True)
+    path           = Column(String(1024), nullable=True)
+    decision       = Column(String(16), nullable=True, index=True)
+    action         = Column(String(32), nullable=True)
+    domain_id      = Column(String(36), nullable=True, index=True)
+    hostname       = Column(String(255), nullable=True, index=True)
+    http_status    = Column(Integer, nullable=True, default=200)
+    client_ip      = Column(String(64), nullable=True, index=True)
+    findings_count = Column(Integer, nullable=False, default=0)
+    findings_json  = Column(Text, nullable=False, default="[]")
+    processing_time_ms = Column(Float, nullable=False, default=0.0)
+    policy_mode    = Column(String(16), nullable=False, default="monitor")
+    origin_status  = Column(Integer, nullable=True)
+    is_test        = Column(Boolean, nullable=False, default=False, index=True)
+    headers_sanitized_json = Column(Text, nullable=True)
+    query_sanitized_json   = Column(Text, nullable=True)
+    body_sanitized = Column(Text, nullable=True)
+    tenant_id      = Column(String(36), nullable=True, index=True)
+    timestamp      = Column(DateTime(timezone=True), default=now_utc, index=True)
+
     # Relationship to incident (optional)
     incident_id    = Column(UUID(as_uuid=True), ForeignKey("incidents.id"), nullable=True)
     incident       = relationship("Incident", back_populates="events")
@@ -86,23 +108,58 @@ class BlockedIP(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username    = Column(String(64), nullable=False, unique=True, index=True)
-    email       = Column(String(256), nullable=False, unique=True, index=True)
-    full_name   = Column(String(128), nullable=False)
-    hashed_pwd  = Column(String(256), nullable=False)
-    role        = Column(String(32), nullable=False, default="analyst")
-    is_active   = Column(Boolean, default=True)
-    mfa_enabled = Column(Boolean, default=False)
-    created_at  = Column(DateTime(timezone=True), default=now_utc)
-    last_login  = Column(DateTime(timezone=True), nullable=True)
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username        = Column(String(64), nullable=False, unique=True, index=True)
+    email           = Column(String(256), nullable=True, unique=True, index=True)
+    full_name       = Column(String(128), nullable=True)
+    hashed_pwd      = Column(String(256), nullable=True)
+    hashed_password = Column(String(256), nullable=True)
+    role            = Column(String(32), nullable=False, default="analyst")
+    tenant_id       = Column(String(36), nullable=True, default="org-default", index=True)
+    is_active       = Column(Boolean, default=True)
+    is_admin        = Column(Boolean, default=False)
+    mfa_enabled     = Column(Boolean, default=False)
+    created_at      = Column(DateTime(timezone=True), default=now_utc)
+    last_login      = Column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def password_hash(self) -> str:
+        return self.hashed_password or self.hashed_pwd or ""
+
+
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name       = Column(String(128), nullable=False)
+    slug       = Column(String(128), nullable=False, unique=True, index=True)
+    is_active  = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), default=now_utc, index=True)
+
+
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id    = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True)
+    name               = Column(String(256), nullable=False)
+    asset_type         = Column(String(32), nullable=False, default="OTHER")
+    ip_address         = Column(String(64), nullable=False, index=True)
+    hostname           = Column(String(256), nullable=True)
+    description        = Column(Text, nullable=True)
+    environment        = Column(String(32), nullable=False, default="LAB")
+    status             = Column(String(32), nullable=False, default="PENDING", index=True)
+    monitoring_enabled = Column(Boolean, nullable=False, default=False, index=True)
+    sensor_id          = Column(String(128), nullable=True)
+    created_at         = Column(DateTime(timezone=True), default=now_utc, index=True)
+    updated_at         = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
 
 
 class SensorLifecycle(Base):
     __tablename__ = "sensor_lifecycles"
 
     id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    asset_id         = Column(UUID(as_uuid=True), nullable=True)
+    asset_id         = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, unique=True, index=True)
     sensor_id        = Column(String(128), nullable=False, unique=True, index=True)
     desired_state    = Column(String(32), nullable=False, default="STOPPED", index=True)
     status           = Column(String(32), nullable=False, default="OFFLINE", index=True)
@@ -113,9 +170,9 @@ class SensorLifecycle(Base):
     last_seen        = Column(DateTime(timezone=True), nullable=True)
     suricata_pid     = Column(Integer, nullable=True)
     collector_pid    = Column(Integer, nullable=True)
-    restart_count    = Column(Integer, nullable=False, default=0)
+    restart_count    = Column(Integer, nullable=False, default=0, index=True)
     last_error       = Column(Text, nullable=True)
-    created_at       = Column(DateTime(timezone=True), default=now_utc)
+    created_at       = Column(DateTime(timezone=True), default=now_utc, index=True)
     updated_at       = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
 
 
@@ -124,11 +181,11 @@ class SensorCommand(Base):
 
     id           = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sensor_id    = Column(String(128), nullable=False, index=True)
-    command      = Column(String(32), nullable=False)
-    requested_by = Column(String(128), nullable=False)
+    command      = Column(String(32), nullable=False, index=True)
+    requested_by = Column(String(128), nullable=False, index=True)
     status       = Column(String(32), nullable=False, default="PENDING", index=True)
     result       = Column(String(256), nullable=True)
-    created_at   = Column(DateTime(timezone=True), default=now_utc)
+    created_at   = Column(DateTime(timezone=True), default=now_utc, index=True)
     processed_at = Column(DateTime(timezone=True), nullable=True)
 
 
@@ -137,11 +194,10 @@ class SensorAuditLog(Base):
 
     id                     = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sensor_id              = Column(String(128), nullable=False, index=True)
-    admin_user             = Column(String(128), nullable=False)
-    action                 = Column(String(64), nullable=False)
+    admin_user             = Column(String(128), nullable=False, index=True)
+    action                 = Column(String(64), nullable=False, index=True)
     previous_desired_state = Column(String(32), nullable=True)
     new_desired_state      = Column(String(32), nullable=True)
-    result                 = Column(String(32), nullable=False, default="ACCEPTED")
+    result                 = Column(String(32), nullable=False, default="ACCEPTED", index=True)
     details                = Column(Text, nullable=True)
     created_at             = Column(DateTime(timezone=True), default=now_utc, index=True)
-

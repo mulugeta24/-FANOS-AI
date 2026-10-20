@@ -69,7 +69,7 @@ def map_waf_to_attack_type(waf_event: WAFEventIngestion) -> str:
     """
     tags = [t.lower() for t in waf_event.tags]
     message = waf_event.rule_message.lower()
-    
+
     # Check tags first (most reliable)
     if "attack-sqli" in tags or "sql" in tags:
         return "SQL Injection"
@@ -85,7 +85,7 @@ def map_waf_to_attack_type(waf_event: WAFEventIngestion) -> str:
         return "File Upload Attack"
     if "attack-protocol" in tags:
         return "Protocol Violation"
-    
+
     # Check rule message
     if any(kw in message for kw in ["sql", "injection", "union", "select"]):
         return "SQL Injection"
@@ -99,7 +99,7 @@ def map_waf_to_attack_type(waf_event: WAFEventIngestion) -> str:
         return "SSRF"
     if any(kw in message for kw in ["upload", "file"]):
         return "File Upload Attack"
-    
+
     return "Web Attack"
 
 
@@ -112,7 +112,7 @@ async def create_security_event_from_waf(
 ) -> SecurityEvent:
     """
     Convert WAF event to SecurityEvent and persist to database.
-    
+
     Process:
     1. Map WAF event to FANOS attack type
     2. Run through Rule Engine for additional detection
@@ -121,11 +121,11 @@ async def create_security_event_from_waf(
     """
     # Map attack type
     attack_type = map_waf_to_attack_type(waf_event)
-    
+
     # Run Rule Engine on request URI + message (payload proxy)
     payload = f"{waf_event.request_uri} {waf_event.rule_message}"
     rule_match = rule_engine.evaluate(payload)
-    
+
     # Compute risk score
     risk_ctx = RiskContext(
         ai_confidence=float(waf_event.anomaly_score) if waf_event.anomaly_score > 0 else 80.0,
@@ -139,7 +139,7 @@ async def create_security_event_from_waf(
     )
     risk_score = risk_engine.compute(risk_ctx)
     severity = risk_engine.severity_from_risk(risk_score)
-    
+
     # Determine status based on WAF action
     if waf_event.action == "BLOCK" or waf_event.status_code == 403:
         event_status = "BLOCKED"
@@ -147,7 +147,7 @@ async def create_security_event_from_waf(
         event_status = "ALERT"
     else:
         event_status = "MONITORED"
-    
+
     # Create SecurityEvent
     security_event = SecurityEvent(
         severity=severity,
@@ -161,11 +161,11 @@ async def create_security_event_from_waf(
         sensor_source="waf",
         created_at=datetime.fromisoformat(waf_event.timestamp.replace("Z", "+00:00")),
     )
-    
+
     session.add(security_event)
     await session.commit()
     await session.refresh(security_event)
-    
+
     logger.info(
         "Created SecurityEvent from WAF: %s | %s | %s | risk=%d",
         security_event.id,
@@ -173,7 +173,7 @@ async def create_security_event_from_waf(
         waf_event.source_ip,
         risk_score,
     )
-    
+
     return security_event
 
 
@@ -192,7 +192,7 @@ async def ingest_waf_event(
 ):
     """
     Ingest a WAF security event from the FANOS WAF log collector.
-    
+
     This endpoint:
     1. Validates the WAF event
     2. Maps it to FANOS attack type
@@ -236,7 +236,7 @@ async def ingest_waf_events_batch(
     """
     processed = []
     failed = []
-    
+
     for event in events:
         try:
             security_event = await create_security_event_from_waf(event, session)
@@ -251,7 +251,7 @@ async def ingest_waf_events_batch(
                 "waf_event_id": event.event_id,
                 "error": str(e),
             })
-    
+
     return {
         "status": "completed",
         "processed": len(processed),
@@ -264,10 +264,10 @@ async def ingest_waf_events_batch(
 
 
 # ──────────────────────────────────────────────────────────────
-# GET: WAF Events
+# GET: WAF Raw Events (Legacy Ingest Stream)
 # ──────────────────────────────────────────────────────────────
 @router.get(
-    "/events",
+    "/raw-events",
     response_model=List[SecurityEventOut],
     summary="Get WAF Security Events",
 )
@@ -282,25 +282,25 @@ async def get_waf_events(
     """
     try:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-        
+
         query = (
             select(SecurityEvent)
-            .options(selectinload(SecurityEvent.asset))
             .where(SecurityEvent.sensor_source == "waf")
             .where(SecurityEvent.created_at >= cutoff)
             .order_by(SecurityEvent.created_at.desc())
             .limit(limit)
         )
-        
+
+
         if severity:
             query = query.where(SecurityEvent.severity == severity.upper())
-        
+
         result = await session.execute(query)
         events = result.scalars().all()
-        
+
         logger.info("Fetched %d WAF events (hours=%d, severity=%s)", len(events), hours, severity)
         return list(events)
-    
+
     except Exception as e:
         logger.error("Failed to fetch WAF events: %s", e, exc_info=True)
         raise HTTPException(
@@ -310,10 +310,10 @@ async def get_waf_events(
 
 
 # ──────────────────────────────────────────────────────────────
-# GET: WAF Stats
+# GET: WAF Raw Stats
 # ──────────────────────────────────────────────────────────────
 @router.get(
-    "/stats",
+    "/raw-stats",
     response_model=WAFEventStats,
     summary="Get WAF Statistics",
 )
@@ -326,7 +326,7 @@ async def get_waf_stats(
     """
     try:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-        
+
         # Total events
         total_query = (
             select(func.count(SecurityEvent.id))
@@ -335,7 +335,7 @@ async def get_waf_stats(
         )
         total_result = await session.execute(total_query)
         total = total_result.scalar() or 0
-        
+
         # Blocked events
         blocked_query = (
             select(func.count(SecurityEvent.id))
@@ -345,7 +345,7 @@ async def get_waf_stats(
         )
         blocked_result = await session.execute(blocked_query)
         blocked = blocked_result.scalar() or 0
-        
+
         # Severity counts
         severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
         for sev in severity_counts.keys():
@@ -357,9 +357,9 @@ async def get_waf_stats(
             )
             sev_result = await session.execute(sev_query)
             severity_counts[sev] = sev_result.scalar() or 0
-        
+
         logger.info("Computed WAF stats: total=%d, blocked=%d", total, blocked)
-        
+
         return WAFEventStats(
             total_events=total,
             blocked=blocked,
@@ -369,7 +369,7 @@ async def get_waf_stats(
             medium=severity_counts["MEDIUM"],
             low=severity_counts["LOW"],
         )
-    
+
     except Exception as e:
         logger.error("Failed to compute WAF stats: %s", e, exc_info=True)
         raise HTTPException(
@@ -433,7 +433,7 @@ async def get_waf_config():
     """
     try:
         import subprocess
-        
+
         # Read docker-compose environment for WAF service
         result = subprocess.run(
             ["docker", "inspect", "fanos-waf", "--format", "{{json .Config.Env}}"],
@@ -441,7 +441,7 @@ async def get_waf_config():
             text=True,
             timeout=5,
         )
-        
+
         if result.returncode != 0:
             # WAF container not running - return default config
             return WAFConfig(
@@ -456,12 +456,12 @@ async def get_waf_config():
                 port=8080,
                 container_status="stopped",
             )
-        
+
         # Parse environment variables
         import json
         env_vars = json.loads(result.stdout.strip())
         env_dict = {var.split("=", 1)[0]: var.split("=", 1)[1] for var in env_vars if "=" in var}
-        
+
         return WAFConfig(
             rule_engine=env_dict.get("MODSEC_RULE_ENGINE", "on"),
             audit_engine=env_dict.get("MODSEC_AUDIT_ENGINE", "RelevantOnly"),
@@ -474,7 +474,7 @@ async def get_waf_config():
             port=int(env_dict.get("PORT", "8080")),
             container_status="running",
         )
-    
+
     except subprocess.TimeoutExpired:
         logger.error("Docker inspect timeout")
         raise HTTPException(status_code=500, detail="WAF container check timeout")
@@ -490,23 +490,23 @@ async def get_waf_config():
 async def update_waf_config(config: WAFConfigUpdate):
     """
     Update ModSecurity configuration by modifying docker-compose.yml and restarting WAF container.
-    
+
     **Note:** This endpoint modifies docker-compose.yml and requires docker restart.
     In production, use environment file or ConfigMap injection instead.
     """
     try:
         import yaml
         from pathlib import Path
-        
+
         compose_file = Path("c:/Fanos Aii/docker-compose.yml")
-        
+
         # Read docker-compose.yml
         with open(compose_file, "r", encoding="utf-8") as f:
             compose_data = yaml.safe_load(f)
-        
+
         # Update WAF service environment variables
         waf_env = compose_data["services"]["waf"]["environment"]
-        
+
         if config.rule_engine is not None:
             waf_env["MODSEC_RULE_ENGINE"] = config.rule_engine
         if config.audit_engine is not None:
@@ -521,20 +521,20 @@ async def update_waf_config(config: WAFConfigUpdate):
             waf_env["MODSEC_REQ_BODY_ACCESS"] = "on" if config.req_body_access else "off"
         if config.resp_body_access is not None:
             waf_env["MODSEC_RESP_BODY_ACCESS"] = "on" if config.resp_body_access else "off"
-        
+
         # Write back to docker-compose.yml
         with open(compose_file, "w", encoding="utf-8") as f:
             yaml.safe_dump(compose_data, f, default_flow_style=False, sort_keys=False)
-        
+
         logger.info("Updated docker-compose.yml with new WAF configuration")
-        
+
         return {
             "status": "updated",
             "message": "Configuration saved to docker-compose.yml",
             "restart_required": True,
             "restart_command": "docker compose restart waf",
         }
-    
+
     except Exception as e:
         logger.error("Failed to update WAF config: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Config update failed: {str(e)}")
@@ -550,9 +550,9 @@ async def restart_waf():
     """
     try:
         import subprocess
-        
+
         logger.info("Restarting WAF container...")
-        
+
         result = subprocess.run(
             ["docker", "compose", "restart", "waf"],
             capture_output=True,
@@ -560,7 +560,7 @@ async def restart_waf():
             timeout=30,
             cwd="c:/Fanos Aii",
         )
-        
+
         if result.returncode == 0:
             return {
                 "status": "success",
@@ -572,7 +572,7 @@ async def restart_waf():
                 status_code=500,
                 detail=f"Restart failed: {result.stderr}",
             )
-    
+
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=500, detail="Restart timeout (>30s)")
     except Exception as e:
@@ -591,22 +591,22 @@ async def get_custom_rules():
     """
     try:
         from pathlib import Path
-        
+
         rules_file = Path("c:/Fanos Aii/security-engines/waf/config/crs/fanos-rules.conf")
-        
+
         if not rules_file.exists():
             return []
-        
+
         rules = []
         with open(rules_file, "r", encoding="utf-8") as f:
             content = f.read()
-            
+
             # Parse SecRule definitions (simplified parser)
             import re
             rule_pattern = r'SecRule[^\n]+id:(\d+)[^\n]+msg:\'([^\']+)\'[^\n]+tag:\'([^\']+)\'[^\n]+severity:\'([^\']+)\''
-            
+
             matches = re.findall(rule_pattern, content)
-            
+
             rule_metadata = {
                 "9500001": ("SQL Injection", "Time-based blind SQLi"),
                 "9500002": ("SQL Injection", "Stacked queries / UNION injection"),
@@ -630,10 +630,10 @@ async def get_custom_rules():
                 "9500081": ("Protocol Violation", "Oversized request URI"),
                 "9500082": ("Protocol Violation", "Double URL-encoding evasion"),
             }
-            
+
             for rule_id, msg, tag, severity in matches:
                 category, description = rule_metadata.get(rule_id, ("Unknown", msg))
-                
+
                 rules.append(WAFCustomRule(
                     id=rule_id,
                     name=description,
@@ -642,10 +642,10 @@ async def get_custom_rules():
                     category=category,
                     description=msg,
                 ))
-        
+
         logger.info("Loaded %d custom rules from fanos-rules.conf", len(rules))
         return rules
-    
+
     except Exception as e:
         logger.error("Failed to load custom rules: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Rule loading failed: {str(e)}")
@@ -658,18 +658,18 @@ async def get_custom_rules():
 async def toggle_custom_rule(toggle: WAFRuleToggle):
     """
     Enable or disable a FANOS custom rule.
-    
+
     **Implementation:** Comments out the SecRule line in fanos-rules.conf.
     Requires WAF restart to take effect.
     """
     try:
         from pathlib import Path
-        
+
         rules_file = Path("c:/Fanos Aii/security-engines/waf/config/crs/fanos-rules.conf")
-        
+
         with open(rules_file, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        
+
         # Find and toggle the rule
         rule_found = False
         for i, line in enumerate(lines):
@@ -684,23 +684,23 @@ async def toggle_custom_rule(toggle: WAFRuleToggle):
                     if not line.strip().startswith("#"):
                         lines[i] = "# " + line
                         rule_found = True
-        
+
         if not rule_found:
             raise HTTPException(status_code=404, detail=f"Rule {toggle.rule_id} not found")
-        
+
         # Write back
         with open(rules_file, "w", encoding="utf-8") as f:
             f.writelines(lines)
-        
+
         action = "enabled" if toggle.enabled else "disabled"
         logger.info("Rule %s %s", toggle.rule_id, action)
-        
+
         return {
             "status": "success",
             "message": f"Rule {toggle.rule_id} {action}",
             "restart_required": True,
         }
-    
+
     except Exception as e:
         logger.error("Failed to toggle rule: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Rule toggle failed: {str(e)}")

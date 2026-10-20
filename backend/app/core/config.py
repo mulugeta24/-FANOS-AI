@@ -40,13 +40,43 @@ class Settings(BaseSettings):
 
     # Suricata Collector Authentication
     SURICATA_INGEST_TOKEN: str = ""
-    
+    FANOS_SENSOR_TOKEN: str = ""
+    VT_API_KEY: str = ""
+
+
     # Suricata Correlation Configuration
     FANOS_SURICATA_CORRELATION_WINDOW_SECONDS: int = 300
     FANOS_SURICATA_CORRELATION_MAX_EVENTS: int = 100
-    
+
     # Deduplication Configuration
     FANOS_DEDUP_WINDOW_SECONDS: int = 60
+
+    # FANOS WAF Unified Configuration
+    PROJECT_NAME: str = "FANOS AI Unified Cybersecurity Platform"
+    WAF_MODE: str = "monitor"  # "monitor" or "block"
+    BLOCK_THRESHOLD: int = 70
+    MONITOR_THRESHOLD: int = 30
+    MAX_REQUEST_BODY_SIZE_BYTES: int = 1048576  # 1 MB
+    MAX_URI_LENGTH: int = 2048                  # 2 KB
+    MAX_HEADER_COUNT: int = 50
+    MAX_HEADER_VALUE_LENGTH: int = 4096         # 4 KB
+    MAX_QUERY_PARAM_COUNT: int = 50
+    UPSTREAM_TARGET_URL: str = "http://localhost:3000"
+    PROXY_ENABLED: bool = True
+    PROXY_FAIL_MODE: str = "fail_closed"  # "fail_closed" or "fail_open"
+    RATE_LIMIT_LOGIN_MAX_ATTEMPTS: int = 5
+    RATE_LIMIT_LOGIN_WINDOW_SECONDS: int = 300
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "ChangeMeImmediately123!"
+
+    # Scanner Configuration
+    SCANNER_ALLOW_PRIVATE_TARGETS: bool = False
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ]
 
     @property
     def allowed_origins_list(self) -> List[str]:

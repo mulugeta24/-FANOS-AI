@@ -23,6 +23,10 @@ import NetworkIDS         from '@/pages/detection/NetworkIDS'
 import WebAttackDetection from '@/pages/detection/WebAttackDetection'
 import SystemDetection    from '@/pages/detection/SystemDetection'
 import DetectionEvents    from '@/pages/detection/DetectionEvents'
+import URLThreatDetection from '@/pages/threat-detection/URLThreatDetection'
+import WebScannerPage     from '@/pages/scanner/WebScannerPage'
+
+
 
 // ── Customer SOC — Prevention ─────────────────────────────────
 import BlockedIPs         from '@/pages/prevention/BlockedIPs'
@@ -131,13 +135,18 @@ export default function App() {
         {/* Network Security — Zeek + Suricata */}
         <Route path="/secops/network/zeek"      element={<ZeekPage />} />
         <Route path="/secops/network/suricata"  element={<SuricataPage />} />
-        {/* Web Security — WAF */}
-        <Route path="/secops/web/waf"           element={<WAFPage />} />
+        {/* Web Security — WAF, URL Threat Detection & Web Scanner */}
+        <Route path="/secops/web/waf"              element={<WAFPage />} />
+        <Route path="/secops/web/threat-detection" element={<URLThreatDetection />} />
+        <Route path="/secops/threat-detection"     element={<URLThreatDetection />} />
+        <Route path="/secops/web/scanner"          element={<WebScannerPage />} />
+        <Route path="/secops/scanner"              element={<WebScannerPage />} />
         {/* Intelligence + Assets + Reports */}
         <Route path="/secops/threat-intel"      element={<ThreatIntelligence />} />
         <Route path="/secops/assets"            element={<SecOpsAssets />} />
         <Route path="/secops/reports"           element={<SecurityReports />} />
       </Route>
+
 
       {/* ══════════════════════════════════════════════════════
           CUSTOMER SOC workspace  (existing AppLayout — UNCHANGED)
@@ -156,11 +165,14 @@ export default function App() {
         <Route path="/detection/cloud"       element={<Placeholder title="Cloud Detection"      icon="Cloud"    color="blue"   desc="Monitor cloud workloads across AWS, Azure, and GCP. Detect misconfigurations, unauthorized access, and cloud-native threats." />} />
         <Route path="/detection/malware"     element={<Placeholder title="Malware Detection"    icon="Skull"    color="red"    desc="Real-time malware detection using AI signature and behavior analysis. Covers trojans, worms, RATs, and advanced persistent threats." />} />
         <Route path="/detection/ransomware"  element={<Placeholder title="Ransomware Detection" icon="Lock"     color="red"    desc="Behavioral ransomware detection — identifies file encryption patterns, shadow copy deletion, and ransom note creation in real time." />} />
-        <Route path="/detection/phishing"    element={<Placeholder title="Phishing Detection"   icon="Mail"     color="orange" desc="AI email and URL phishing detection. Analyzes headers, links, and payload to identify spear-phishing and business email compromise." />} />
+        <Route path="/detection/phishing"    element={<URLThreatDetection />} />
+        <Route path="/threat-detection"      element={<URLThreatDetection />} />
+        <Route path="/web-scanner"           element={<WebScannerPage />} />
         <Route path="/detection/bots"        element={<Placeholder title="Bot Detection"        icon="Bot"      color="purple" desc="Detect automated bot traffic, credential stuffing, web scraping, and DDoS bot networks using behavioral fingerprinting." />} />
         <Route path="/detection/bruteforce"  element={<Placeholder title="Brute Force Detection" icon="KeyRound" color="orange" desc="Monitor and detect brute force attacks across SSH, RDP, web login forms, and API authentication endpoints." />} />
         <Route path="/detection/rules"       element={<Placeholder title="Detection Rules"      icon="Filter"   color="purple" desc="Manage and tune FANOS AI detection rules, Suricata signatures, and custom rule sets." />} />
         <Route path="/detection/events"      element={<DetectionEvents />} />
+
 
         {/* ── Prevention ───────────────────────── */}
         <Route path="/prevention/blocking"  element={<Placeholder title="Active Blocking"      icon="Shield"      color="green"  desc="Real-time threat blocking across network, web, and host layers with automated prevention engine." />} />
@@ -181,8 +193,9 @@ export default function App() {
         <Route path="/soc/correlation"  element={<Placeholder title="Threat Correlation"  icon="Network"   color="red"    desc="AI-powered correlation engine linking related events into attack campaigns with kill chain mapping." />} />
 
         {/* ── Web Security ─────────────────────── */}
-        <Route path="/web/assessment"  element={<Placeholder title="URI Assessment"    icon="Link2"     color="blue"   desc="Analyze authorized web application endpoints for suspicious activity, vulnerabilities, and security findings." />} />
+        <Route path="/web/assessment"  element={<URLThreatDetection />} />
         <Route path="/web/requests"    element={<Placeholder title="Web Requests"      icon="Globe"     color="green"  desc="Full web request log with attack classification, payload inspection, and WAF decision for each request." />} />
+
         <Route path="/web/findings"    element={<Placeholder title="Security Findings" icon="Search"    color="orange" desc="Confirmed security vulnerabilities and findings discovered by FANOS AI across your web applications." />} />
         <Route path="/web/analytics"   element={<Placeholder title="Web Analytics"     icon="BarChart2" color="blue"   desc="Traffic analytics, attack trend visualization, and threat intelligence for web application security." />} />
 

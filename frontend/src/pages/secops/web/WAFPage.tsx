@@ -1,238 +1,377 @@
 /**
  * Security Operations → Web Security → WAF
- * Web Application Firewall operational interface.
+ * Web Application Firewall operational interface integrated directly into FANOS AI SOC.
  */
+import { useState, useEffect } from 'react';
 import {
-  ShieldCheck, Globe, Ban, CheckCircle2, AlertTriangle,
-  Activity, Settings, ArrowRight, List, Filter,
-} from 'lucide-react'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import PageShell from '@/components/ui/PageShell'
+  Globe,
+  Sliders,
+  FileCode,
+  ListFilter,
+  FileText,
+  RefreshCw,
+  Activity,
+  Flame,
+  ShieldAlert,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react';
+import PageShell from '@/components/ui/PageShell';
+import { getWafStats, getWafDomains, ensureWafAuth, updateWafDomain, updateWafSettings } from '@/services/wafApi';
+import { StatsSummary, Domain } from '@/types/waf';
+import { DEFAULT_WAF_STATS, DEFAULT_WAF_DOMAINS } from './waf/wafDefaults';
+import { WAFOverviewTab } from './waf/WAFOverviewTab';
+import { WAFLiveInspectTab } from './waf/WAFLiveInspectTab';
+import { WAFEventsTab } from './waf/WAFEventsTab';
+import { WAFRulesTab } from './waf/WAFRulesTab';
+import { WAFPoliciesTab } from './waf/WAFPoliciesTab';
+import { WAFReportsTab } from './waf/WAFReportsTab';
+import { WAFTestConsoleTab } from './waf/WAFTestConsoleTab';
+import { WAFDomainSelector } from './waf/WAFDomainSelector';
 
-const WAF_EVENTS = [
-  { time:'14:22:11', rule:'FANOS-SQL-001', type:'SQL Injection',    src:'192.168.56.10', target:'/login',     action:'BLOCK',  code:403, confidence:'98.7%' },
-  { time:'14:21:03', rule:'FANOS-XSS-001', type:'XSS',             src:'10.0.0.44',     target:'/comment',   action:'BLOCK',  code:403, confidence:'93.4%' },
-  { time:'14:18:45', rule:'FANOS-PATH-001',type:'Path Traversal',   src:'103.22.0.5',   target:'/download',  action:'BLOCK',  code:403, confidence:'90.5%' },
-  { time:'14:15:22', rule:'FANOS-SSRF-001',type:'SSRF',             src:'45.78.90.12',  target:'/api/fetch', action:'ALERT',  code:200, confidence:'91.0%' },
-  { time:'14:12:09', rule:'FANOS-CMD-001', type:'Command Injection',src:'172.16.0.88',  target:'/api/exec',  action:'BLOCK',  code:403, confidence:'97.2%' },
-  { time:'14:09:34', rule:'OWASP-CRS-930', type:'RFI',              src:'91.105.0.4',   target:'/include',   action:'BLOCK',  code:403, confidence:'88.1%' },
-  { time:'14:05:11', rule:'RATE-LIMIT',    type:'Rate Limit',        src:'198.51.0.6',   target:'/api/search',action:'LIMIT', code:429, confidence:'100%'  },
-  { time:'14:01:44', rule:'NONE',          type:'Normal',            src:'192.168.1.100',target:'/api/health',action:'ALLOW', code:200, confidence:'99.9%' },
-]
+const TABS = [
+  { id: 'Overview', label: 'Overview', icon: <Activity size={12} /> },
+  { id: 'Live Inspect', label: 'Live Inspect', icon: <FileCode size={12} /> },
+  { id: 'Events', label: 'Security Events', icon: <Globe size={12} /> },
+  { id: 'Rules', label: 'Rules & Detectors', icon: <ListFilter size={12} /> },
+  { id: 'Policies', label: 'Policies & Limits', icon: <Sliders size={12} /> },
+  { id: 'Test Console', label: 'Security Test Console', icon: <Flame size={12} /> },
+  { id: 'Reports', label: 'Reports', icon: <FileText size={12} /> },
+] as const;
 
-const RULES = [
-  { id:'FANOS-SQL-001', name:'SQL Injection Detection',    type:'Custom',  status:'Active', triggers:1842, action:'BLOCK' },
-  { id:'FANOS-XSS-001', name:'XSS Pattern Detection',     type:'Custom',  status:'Active', triggers:984,  action:'BLOCK' },
-  { id:'FANOS-PATH-001',name:'Path Traversal Detection',  type:'Custom',  status:'Active', triggers:312,  action:'BLOCK' },
-  { id:'FANOS-SSRF-001',name:'SSRF Detection',            type:'Custom',  status:'Active', triggers:156,  action:'BLOCK' },
-  { id:'FANOS-CMD-001', name:'Command Injection',         type:'Custom',  status:'Active', triggers:228,  action:'BLOCK' },
-  { id:'OWASP-CRS-930', name:'OWASP CRS RFI/LFI',        type:'OWASP',   status:'Active', triggers:88,   action:'BLOCK' },
-  { id:'RATE-LIMIT',    name:'API Rate Limiting',         type:'System',  status:'Active', triggers:2156, action:'LIMIT' },
-]
-
-const TABS = ['Overview','Events','Rules','Configuration'] as const
-type Tab = typeof TABS[number]
-
-const actionStyle: Record<string,{bg:string;color:string}> = {
-  BLOCK: { bg:'rgba(239,68,68,0.1)',   color:'#ef4444' },
-  ALERT: { bg:'rgba(245,158,11,0.1)',  color:'#f59e0b' },
-  ALLOW: { bg:'rgba(0,229,160,0.08)',  color:'#00e5a0' },
-  LIMIT: { bg:'rgba(0,200,255,0.1)',   color:'#00c8ff' },
-}
+type TabId = typeof TABS[number]['id'];
 
 export default function WAFPage() {
-  const [tab, setTab] = useState<Tab>('Overview')
-  const navigate = useNavigate()
+  const [tab, setTab] = useState<TabId>('Overview');
+  const [stats, setStats] = useState<StatsSummary>(DEFAULT_WAF_STATS);
+  const [loading, setLoading] = useState(false);
+  const [domains, setDomains] = useState<Domain[]>(DEFAULT_WAF_DOMAINS);
+  const [selectedDomainId, setSelectedDomainId] = useState<string>('all');
+  const [domainsLoading, setDomainsLoading] = useState(false);
+  const [domainsError, setDomainsError] = useState<string | null>(null);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(true);
+
+  // Modal triggers for external action buttons (such as in Overview tab)
+  const [isProtectModalOpen, setIsProtectModalOpen] = useState(false);
+  const [externalManageDomain, setExternalManageDomain] = useState<Domain | null>(null);
+
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      await ensureWafAuth();
+      const data = await getWafStats();
+      if (data && data.total_inspected !== undefined) {
+        setStats(data);
+        setIsLiveConnected(true);
+      }
+    } catch (err) {
+      console.warn('WAF live stats sync notice: retaining operational telemetry cache', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDomains = async () => {
+    setDomainsLoading(true);
+    try {
+      await ensureWafAuth();
+      const doms = await getWafDomains();
+      if (doms && Array.isArray(doms) && doms.length > 0) {
+        // Filter out unwanted default test domains if they somehow exist
+        const cleaned = doms.filter((d) => d.domain_name === 'fanos-sec.vercel.app' || !['juiceshop.lab.test', 'test-portal.example.com', 'attacker-proxy.com', 'demo-app.local', '127.0.0.1', 'localhost'].includes(d.domain_name));
+        setDomains(cleaned.length > 0 ? cleaned : doms);
+        setDomainsError(null);
+        setIsLiveConnected(true);
+      }
+    } catch (err: any) {
+      console.warn('WAF domains sync notice: retaining fleet cache', err);
+      if (domains.length === 0) {
+        setDomainsError(err?.response?.data?.detail || err?.message || 'Failed to load domains');
+      }
+    } finally {
+      setDomainsLoading(false);
+    }
+  };
+
+  const handleDomainModeChange = async (domainId: string, newMode: 'monitor' | 'block' | 'hybrid') => {
+    // Optimistically update fleet in UI
+    setDomains((prev) =>
+      prev.map((d) => (d.id === domainId ? { ...d, enforcement_mode: newMode } : d))
+    );
+    try {
+      await updateWafDomain(domainId, { enforcement_mode: newMode });
+      fetchDomains();
+      fetchStats();
+    } catch (err) {
+      console.error('Failed to change domain mode', err);
+      fetchDomains();
+    }
+  };
+
+  const handleModeShift = async (newMode: 'monitor' | 'block' | 'hybrid') => {
+    if (selectedDomainId && selectedDomainId !== 'all') {
+      await handleDomainModeChange(selectedDomainId, newMode);
+    } else {
+      setDomains((prev) => prev.map((d) => ({ ...d, enforcement_mode: newMode })));
+      setStats((prev) => ({ ...prev, current_mode: newMode }));
+      try {
+        await updateWafSettings({ waf_mode: newMode });
+        for (const d of domains) {
+          try {
+            await updateWafDomain(d.id, { enforcement_mode: newMode });
+          } catch {}
+        }
+        fetchDomains();
+        fetchStats();
+      } catch (err) {
+        console.error('Failed to shift global mode', err);
+        fetchDomains();
+        fetchStats();
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+    fetchDomains();
+    const interval = setInterval(() => {
+      fetchStats();
+      fetchDomains();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const selectedDomain = domains.find((d) => d.id === selectedDomainId);
+  const currentEffectiveMode = (
+    selectedDomain?.enforcement_mode || stats?.current_mode || 'block'
+  ).toLowerCase();
+  const isBlock = currentEffectiveMode === 'block';
+  const isHybrid = currentEffectiveMode === 'hybrid' || currentEffectiveMode === 'both';
 
   return (
     <PageShell
       title="WAF — Web Application Firewall"
-      subtitle="Web security engine — rule management, blocked requests, and security events"
-      badge={{ label:'ONLINE', color:'green' }}
-    >
-      {/* Tabs */}
-      <div className="flex items-center gap-1 p-1 rounded-lg w-fit"
-        style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' }}>
-        {TABS.map(t=>(
-          <button key={t} onClick={()=>setTab(t)}
-            className="px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all"
+      subtitle="Deterministic Web Security Engine — real-time inspection, multi-vector threat prevention & rule operations"
+      badge={{
+        label: isBlock
+          ? 'BLOCKING ENFORCED'
+          : isHybrid
+          ? 'HYBRID DEFENSE (BOTH)'
+          : 'MONITOR MODE',
+        color: isBlock ? 'green' : isHybrid ? 'blue' : 'orange',
+      }}
+      actions={
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Shift Mode Top Button Group (BLOCK / HYBRID / MONITOR) */}
+          <div
+            className="flex items-center p-0.5 rounded-lg border shadow-sm"
             style={{
-              background: tab===t ? 'rgba(0,229,160,0.15)':'transparent',
-              color:       tab===t ? '#00e5a0':'#6b7280',
-              border:      tab===t ? '1px solid rgba(0,229,160,0.3)':'1px solid transparent',
-            }}>
-            {t}
+              background: 'rgba(8,14,26,0.95)',
+              borderColor: 'rgba(255,255,255,0.12)',
+            }}
+          >
+            <span className="text-[10px] font-mono font-bold text-slate-400 px-2 select-none hidden md:inline">
+              MODE:
+            </span>
+            <button
+              onClick={() => handleModeShift('block')}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                isBlock
+                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/40 ring-1 ring-rose-300'
+                  : 'text-slate-400 hover:text-rose-300 hover:bg-rose-500/10'
+              }`}
+              title="Block Mode: Drops threats at the edge with HTTP 403"
+            >
+              <ShieldAlert size={12} className={isBlock ? 'text-white' : 'text-rose-400'} />
+              <span>BLOCK</span>
+            </button>
+            <button
+              onClick={() => handleModeShift('hybrid')}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                isHybrid
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/40 ring-1 ring-cyan-200'
+                  : 'text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/10'
+              }`}
+              title="Hybrid Defense: Drops high-risk threats, audits low-risk anomalies"
+            >
+              <Zap size={12} className={isHybrid ? 'text-slate-950' : 'text-cyan-400'} />
+              <span>HYBRID</span>
+            </button>
+            <button
+              onClick={() => handleModeShift('monitor')}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                !isBlock && !isHybrid
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/40 ring-1 ring-amber-200'
+                  : 'text-slate-400 hover:text-amber-300 hover:bg-amber-500/10'
+              }`}
+              title="Monitor Mode: Passive audit without dropping requests"
+            >
+              <ShieldCheck size={12} className={!isBlock && !isHybrid ? 'text-slate-950' : 'text-amber-400'} />
+              <span>MONITOR</span>
+            </button>
+          </div>
+
+          {/* Live Engine Connectivity Indicator */}
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono border"
+            style={{
+              background: 'rgba(8,14,26,0.85)',
+              borderColor: isLiveConnected ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)',
+              color: isLiveConnected ? '#34d399' : '#fbbf24',
+            }}
+            title="WAF Unified Engine on 127.0.0.1:8000 / 8002"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            <span className="font-semibold tracking-tight">
+              {isLiveConnected ? 'LIVE (8000)' : 'SYNCING'}
+            </span>
+          </div>
+
+          <WAFDomainSelector
+            selectedDomainId={selectedDomainId}
+            onSelectDomain={(id) => setSelectedDomainId(id)}
+            domains={domains}
+            loading={domainsLoading}
+            error={domainsError}
+            onRefresh={fetchDomains}
+            onDomainAdded={(newDom) => {
+              setSelectedDomainId(newDom.id);
+              fetchDomains();
+            }}
+            isExternalModalOpen={isProtectModalOpen}
+            setIsExternalModalOpen={setIsProtectModalOpen}
+            externalManageDomain={externalManageDomain}
+            setExternalManageDomain={setExternalManageDomain}
+          />
+
+          <button
+            onClick={() => {
+              fetchStats();
+              fetchDomains();
+            }}
+            disabled={loading || domainsLoading}
+            className="fanos-btn px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1.5"
+            title="Refresh engine state & fleet"
+          >
+            <RefreshCw size={12} className={loading || domainsLoading ? 'animate-spin' : ''} />
+            <span>Sync</span>
           </button>
-        ))}
+        </div>
+      }
+    >
+      {/* Real-time Ingress Threat Status Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+        <div className="flex flex-wrap items-center gap-3 font-mono text-[11px]">
+          <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            INLINE PROXY ACTIVE
+          </span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400">
+            Gateway: <strong className="text-cyan-400">127.0.0.1:8002</strong>
+          </span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400">
+            Target Website: <strong className="text-emerald-400">{selectedDomain ? selectedDomain.domain_name : 'fanos-sec.vercel.app'}</strong>
+          </span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400">
+            Core: <strong className="text-white">Deterministic v1.0</strong>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4 text-[11px] font-mono">
+          <span className="text-slate-400">
+            Total Inspected: <strong className="text-cyan-400">{stats?.total_inspected?.toLocaleString() ?? '0'}</strong>
+          </span>
+          <span className="text-slate-400">
+            Blocked: <strong className="text-rose-400">{stats?.total_blocked?.toLocaleString() ?? '0'}</strong>
+          </span>
+          <span className="text-slate-400">
+            Allowed: <strong className="text-emerald-400">{stats?.total_allowed?.toLocaleString() ?? '0'}</strong>
+          </span>
+        </div>
       </div>
 
-      {tab === 'Overview' && (
-        <>
-          {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label:'Blocked Today',    value:'1,842', icon:<Ban size={15}/>,          color:'#ef4444' },
-              { label:'Requests Allowed', value:'48,291',icon:<CheckCircle2 size={15}/>, color:'#00e5a0' },
-              { label:'Active Rules',     value:RULES.length, icon:<List size={15}/>,    color:'#00c8ff' },
-              { label:'WAF Uptime',       value:'99.95%',icon:<Activity size={15}/>,     color:'#00e5a0' },
-            ].map(s=>(
-              <div key={s.label} className="fanos-card p-4">
-                <div className="flex items-start gap-2 mb-2">
-                  <span style={{color:s.color}}>{s.icon}</span>
-                </div>
-                <div className="text-[22px] font-bold text-white">{s.value}</div>
-                <div className="text-[10px] text-fanos-muted mt-0.5">{s.label}</div>
-              </div>
-            ))}
-          </div>
+      {/* Navigation Tabs Bar */}
+      <div
+        className="flex items-center gap-1 p-1 rounded-lg w-fit overflow-x-auto max-w-full"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        {TABS.map((t) => {
+          const isEventsTab = t.id === 'Events';
+          const blockedCount = stats?.total_blocked ?? 0;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap cursor-pointer"
+              style={{
+                background: tab === t.id ? 'rgba(0,200,255,0.15)' : 'transparent',
+                color: tab === t.id ? '#00c8ff' : '#94A3B8',
+                border: tab === t.id ? '1px solid rgba(0,200,255,0.3)' : '1px solid transparent',
+              }}
+            >
+              <span style={{ color: tab === t.id ? '#00c8ff' : '#64748B' }}>{t.icon}</span>
+              <span>{t.label}</span>
+              {isEventsTab && blockedCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
+                  {blockedCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Attack type breakdown */}
-          <div className="fanos-card">
-            <div className="fanos-panel-header">
-              <div className="fanos-panel-title"><ShieldCheck size={13} className="text-fanos-green"/>Attack Type Breakdown</div>
-            </div>
-            <div className="px-4 pb-4 space-y-2">
-              {[
-                { type:'SQL Injection',    count:1842, pct:38, color:'#ef4444' },
-                { type:'XSS',             count:984,  pct:20, color:'#f59e0b' },
-                { type:'Rate Limiting',   count:2156, pct:22, color:'#00c8ff' },
-                { type:'Path Traversal',  count:312,  pct: 6, color:'#8b5cf6' },
-                { type:'Command Injection',count:228, pct: 5, color:'#ef4444' },
-                { type:'SSRF',            count:156,  pct: 3, color:'#f59e0b' },
-                { type:'Other',           count:288,  pct: 6, color:'#6b7280' },
-              ].map(a=>(
-                <div key={a.type} className="flex items-center gap-3">
-                  <span className="text-[10px] text-fanos-muted w-36 flex-shrink-0 truncate">{a.type}</span>
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.06)'}}>
-                    <div className="h-full rounded-full" style={{width:`${a.pct}%`,background:a.color}}/>
-                  </div>
-                  <span className="text-[10px] font-mono text-fanos-dim w-12 text-right flex-shrink-0">{a.count.toLocaleString()}</span>
-                  <span className="text-[9px] text-fanos-dim w-8 text-right flex-shrink-0">{a.pct}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick links */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label:'View Events',    onClick:()=>setTab('Events'),        color:'#00c8ff', icon:<Globe size={13}/> },
-              { label:'Manage Rules',   onClick:()=>setTab('Rules'),          color:'#00e5a0', icon:<List size={13}/> },
-              { label:'Configuration',  onClick:()=>setTab('Configuration'),  color:'#8b5cf6', icon:<Settings size={13}/> },
-              { label:'View Incidents', onClick:()=>navigate('/secops/incidents'), color:'#f59e0b', icon:<AlertTriangle size={13}/> },
-            ].map(l=>(
-              <button key={l.label} onClick={l.onClick}
-                className="fanos-card p-3 flex items-center gap-2 text-left hover:border-white/10 transition-all cursor-pointer">
-                <span style={{color:l.color}}>{l.icon}</span>
-                <span className="text-[11px] text-fanos-muted flex-1">{l.label}</span>
-                <ArrowRight size={10} className="text-fanos-dim"/>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {tab === 'Events' && (
-        <div className="fanos-card">
-          <div className="fanos-panel-header">
-            <div className="fanos-panel-title"><Globe size={13} className="text-fanos-accent"/>WAF Event Log</div>
-            <span className="text-[10px] text-fanos-dim">{WAF_EVENTS.length} events</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-black/10 border-b border-white/[0.05]">
-                  {['Time','Rule','Attack Type','Source IP','Target','Action','Status','Confidence'].map(h=>(
-                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold tracking-[0.7px] uppercase text-fanos-dim whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.03]">
-                {WAF_EVENTS.map((e,i)=>{
-                  const as_ = actionStyle[e.action] ?? {bg:'rgba(255,255,255,0.04)',color:'#6b7280'}
-                  return (
-                    <tr key={i} className="hover:bg-white/[0.018] transition-colors">
-                      <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-dim">{e.time}</td>
-                      <td className="px-3 py-2.5 font-mono text-[9px] text-fanos-accent">{e.rule}</td>
-                      <td className="px-3 py-2.5 text-[11px] text-fanos-text">{e.type}</td>
-                      <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-muted">{e.src}</td>
-                      <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-dim">{e.target}</td>
-                      <td className="px-3 py-2.5">
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                          style={{background:as_.bg,color:as_.color,border:`1px solid ${as_.color}25`}}>
-                          {e.action}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-dim">{e.code}</td>
-                      <td className="px-3 py-2.5 font-mono text-[10px]"
-                        style={{color:parseFloat(e.confidence)>=95?'#00e5a0':'#f59e0b'}}>
-                        {e.confidence}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {tab === 'Rules' && (
-        <div className="fanos-card">
-          <div className="fanos-panel-header">
-            <div className="fanos-panel-title"><List size={13} className="text-fanos-accent"/>Active WAF Rules</div>
-            <button className="fanos-btn text-[10px]"><Filter size={10}/>Add Rule</button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-black/10 border-b border-white/[0.05]">
-                  {['Rule ID','Name','Type','Status','Triggers (24h)','Action'].map(h=>(
-                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold tracking-[0.7px] uppercase text-fanos-dim whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.03]">
-                {RULES.map(r=>(
-                  <tr key={r.id} className="hover:bg-white/[0.018] transition-colors">
-                    <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-accent">{r.id}</td>
-                    <td className="px-3 py-2.5 text-[11px] text-fanos-text">{r.name}</td>
-                    <td className="px-3 py-2.5 text-[10px] text-fanos-muted">{r.type}</td>
-                    <td className="px-3 py-2.5">
-                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{background:'rgba(0,229,160,0.08)',color:'#00e5a0',border:'1px solid rgba(0,229,160,0.25)'}}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-[11px] font-bold text-fanos-text">{r.triggers.toLocaleString()}</td>
-                    <td className="px-3 py-2.5">
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                        style={actionStyle[r.action] ?? {background:'rgba(255,255,255,0.04)',color:'#6b7280'}}>
-                        {r.action}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {tab === 'Configuration' && (
-        <div className="fanos-card p-6 flex flex-col items-center gap-4">
-          <Settings size={36} className="text-fanos-dim" />
-          <div className="text-center">
-            <div className="text-[14px] font-bold text-white mb-1">WAF Configuration</div>
-            <div className="text-[12px] text-fanos-muted">OWASP CRS integration, ModSecurity settings, and custom rule management.</div>
-          </div>
-          <div className="text-[10px] font-semibold px-3 py-1.5 rounded"
-            style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',color:'#6b7280'}}>
-            Full configuration panel — coming soon
-          </div>
-        </div>
-      )}
+      {/* Tab Panels */}
+      <div className="mt-2">
+        {tab === 'Overview' && (
+          <WAFOverviewTab
+            stats={stats}
+            domains={domains}
+            selectedDomainId={selectedDomainId}
+            selectedDomain={selectedDomain}
+            onSelectDomain={(id) => setSelectedDomainId(id)}
+            onNavigateTab={(targetTab: any) => setTab(targetTab)}
+            onOpenProtectModal={() => setIsProtectModalOpen(true)}
+            onManageDomain={(domain) => setExternalManageDomain(domain)}
+            onDomainModeChange={handleDomainModeChange}
+            onGlobalModeChange={handleModeShift}
+            isLiveConnected={isLiveConnected}
+          />
+        )}
+        {tab === 'Live Inspect' && <WAFLiveInspectTab />}
+        {tab === 'Events' && (
+          <WAFEventsTab
+            selectedDomainId={selectedDomainId}
+            selectedDomain={selectedDomain}
+          />
+        )}
+        {tab === 'Rules' && <WAFRulesTab />}
+        {tab === 'Policies' && (
+          <WAFPoliciesTab
+            selectedDomainId={selectedDomainId}
+            selectedDomain={selectedDomain}
+            onDomainUpdated={fetchDomains}
+          />
+        )}
+        {tab === 'Test Console' && (
+          <WAFTestConsoleTab
+            selectedDomainId={selectedDomainId}
+            selectedDomain={selectedDomain}
+            domains={domains}
+            onSelectDomain={(id) => {
+              setSelectedDomainId(id);
+            }}
+          />
+        )}
+        {tab === 'Reports' && <WAFReportsTab />}
+      </div>
     </PageShell>
-  )
+  );
 }

@@ -29,12 +29,17 @@ Thumbs.db
 # Database / backups
 backups/
 *.sqlite3
+*.db
+*.sqlite
+
 
 # ML model artifacts
 *.joblib
 *.pkl
 *.h5
 *.model
+!backend/app/models/url_classifier/*.pkl
+!ml/models/url_classifier/*.pkl
 
 # IDE/editor
 .vscode/
@@ -48,3 +53,6 @@ ml/MachineLearningCVE/
 # Scratch investigation dumps
 backend/*_out.txt
 backend/nb_audit_extracted.txt
+
+# Standalone subprojects / repositories
+fanos-waf/

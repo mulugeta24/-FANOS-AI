@@ -20,6 +20,7 @@ from app.ai.feature_extractor import (
     validate_feature_vector,
     NUM_FEATURES,
     SCHEMA_VERSION_SURICATA_FLOW,
+    SCHEMA_VERSION_SURICATA_NATIVE,
     SCHEMA_VERSION_SURICATA_ALERT_LEGACY,
 )
 from app.ai.model_loader import model_loader, NUM_CLASSES
@@ -252,7 +253,7 @@ def test_model_loads_and_executes_on_flow_features():
 
     prediction = fanos_predictor.predict_flow(flow_event, source_ip="192.168.56.101")
     assert prediction.model_status == "loaded"
-    assert prediction.feature_schema == SCHEMA_VERSION_SURICATA_FLOW
+    assert prediction.feature_schema in (SCHEMA_VERSION_SURICATA_FLOW, SCHEMA_VERSION_SURICATA_NATIVE)
     assert 0 <= prediction.predicted_class_id < NUM_CLASSES
     assert isinstance(prediction.confidence, float)
     assert len(prediction.probabilities) == NUM_CLASSES

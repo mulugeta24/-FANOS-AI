@@ -8,7 +8,7 @@ import {
   BrainCircuit, Crosshair, GitBranch, Target,
   Package, Users, Wifi, Plug, ScrollText, Settings,
   Building2, Users2, Key, Settings2,
-  Bell, Activity,
+  Bell, Activity, Bug,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import WorkspaceSwitcher from './WorkspaceSwitcher'
@@ -38,6 +38,8 @@ const NAV: NavGroup[] = [
     items: [
       { label: 'Network IDS / NDR',      to: '/detection/network',     icon: <Radio size={15} /> },
       { label: 'Web Attack Detection',   to: '/detection/web',          icon: <Globe size={15} /> },
+      { label: 'URL Threat Detection',   to: '/threat-detection',       icon: <Globe size={15} />,   badge: 'AI' },
+      { label: 'Web Scanner',            to: '/web-scanner',            icon: <Bug size={15} />,     badge: 'DAST' },
       { label: 'System Detection',       to: '/detection/system',       icon: <Monitor size={15} /> },
       { label: 'Endpoint Detection',     to: '/detection/endpoint',     icon: <Cpu size={15} /> },
       { label: 'Identity Detection',     to: '/detection/identity',     icon: <Fingerprint size={15} /> },
@@ -45,6 +47,7 @@ const NAV: NavGroup[] = [
       { label: 'Malware Detection',      to: '/detection/malware',      icon: <Skull size={15} /> },
       { label: 'Ransomware Detection',   to: '/detection/ransomware',   icon: <Lock size={15} />,  badge: 'NEW' },
       { label: 'Phishing Detection',     to: '/detection/phishing',     icon: <Mail size={15} /> },
+
       { label: 'Bot Detection',          to: '/detection/bots',         icon: <Bot size={15} /> },
       { label: 'Brute Force Detection',  to: '/detection/bruteforce',   icon: <KeyRound size={15} /> },
       { label: 'Detection Rules',        to: '/detection/rules',        icon: <Filter size={15} /> },

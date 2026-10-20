@@ -57,18 +57,16 @@ const EXPANDABLE: ExpandableGroup[] = [
     color:    '#00e5a0',
     basePath: '/secops/web',
     items: [
-      { label: 'WAF', to: '/secops/web/waf', icon: <span className="text-[10px] font-bold">W</span> },
+      { label: 'WAF',                  to: '/secops/web/waf',              icon: <span className="text-[10px] font-bold">W</span> },
+      { label: 'URL Threat Detection', to: '/secops/web/threat-detection', icon: <span className="text-[10px] font-bold">U</span>, badge: 'ML' },
+      { label: 'Web Scanner',          to: '/secops/web/scanner',          icon: <span className="text-[10px] font-bold">WS</span>, badge: 'DAST' },
     ],
   },
+
 ]
 
-const TOP_NAV: NavItem[] = [
-  { label: 'SOC Overview',      to: '/secops/overview',    icon: <LayoutDashboard size={15} />, exact: true },
-  { label: 'Alerts',            to: '/secops/alerts',      icon: <Bell size={15} />,            badge: '12' },
-  { label: 'Incidents',         to: '/secops/incidents',   icon: <FileWarning size={15} />,     badge: '5'  },
-  { label: 'Investigations',    to: '/secops/investigations',icon: <Search size={15} />  },
-  { label: 'Security Events',   to: '/secops/events',      icon: <Zap size={15} />,             badge: '8.4K' },
-]
+
+import { useSecOpsAlerts } from '@/context/SecOpsAlertContext'
 
 const BOTTOM_NAV: NavItem[] = [
   { label: 'Threat Intelligence', to: '/secops/threat-intel', icon: <BrainCircuit size={15} /> },
@@ -158,6 +156,18 @@ function ExpandableSection({ group }: { group: ExpandableGroup }) {
 }
 
 export default function SecOpsSidebar() {
+  const { newAlertsCount, activeIncidentsCount, securityEventsCount, investigations } = useSecOpsAlerts()
+
+  const activeInvCount = investigations.filter(i => i.status === 'Active').length
+
+  const topNav: NavItem[] = [
+    { label: 'SOC Overview',   to: '/secops/overview',      icon: <LayoutDashboard size={15} />, exact: true },
+    { label: 'Alerts',         to: '/secops/alerts',        icon: <Bell size={15} />,            badge: newAlertsCount > 0 ? String(newAlertsCount) : undefined },
+    { label: 'Incidents',      to: '/secops/incidents',     icon: <FileWarning size={15} />,     badge: activeIncidentsCount > 0 ? String(activeIncidentsCount) : undefined },
+    { label: 'Investigations', to: '/secops/investigations',icon: <Search size={15} />,          badge: activeInvCount > 0 ? String(activeInvCount) : undefined },
+    { label: 'Security Events',to: '/secops/events',        icon: <Zap size={15} />,             badge: securityEventsCount > 1000 ? `${(securityEventsCount / 1000).toFixed(1)}K` : String(securityEventsCount) },
+  ]
+
   return (
     <aside className="w-[240px] min-w-[240px] bg-fanos-surface border-r border-white/[0.06] flex flex-col overflow-hidden z-50">
 
@@ -195,7 +205,7 @@ export default function SecOpsSidebar() {
           <p className="px-4 py-[7px] text-[10px] font-semibold tracking-[1.2px] uppercase text-fanos-dim">
             Operations
           </p>
-          {TOP_NAV.map(item => <NavItem key={item.to} item={item} />)}
+          {topNav.map(item => <NavItem key={item.to} item={item} />)}
         </div>
 
         {/* Expandable security domains */}

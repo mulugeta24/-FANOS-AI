@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Bell, Search, Clock, ChevronDown, AlertOctagon, Activity, ShieldAlert } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useWorkspace } from '@/context/WorkspaceContext'
+import { useSecOpsAlerts } from '@/context/SecOpsAlertContext'
 
 const BREADCRUMBS: Record<string, string> = {
   '/secops/overview':            'SOC Overview',
@@ -27,6 +28,7 @@ export default function SecOpsHeader() {
   const location  = useLocation()
   const navigate  = useNavigate()
   const { user }  = useWorkspace()
+  const { criticalAlertsCount, newAlertsCount } = useSecOpsAlerts()
 
   const [timeRange,    setTimeRange]    = useState('Last 24 Hours')
   const [showTimeDrop, setShowTimeDrop] = useState(false)
@@ -131,26 +133,31 @@ export default function SecOpsHeader() {
         </div>
 
         {/* Critical count */}
-        <div
-          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold text-fanos-red"
+        <button
+          onClick={() => navigate('/secops/alerts')}
+          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold text-fanos-red cursor-pointer transition-all hover:bg-red-500/10"
           style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)' }}
         >
-          <AlertOctagon size={12} />
-          7 CRITICAL
-        </div>
+          <AlertOctagon size={12} className={criticalAlertsCount > 0 ? 'animate-pulse' : ''} />
+          {criticalAlertsCount} CRITICAL
+        </button>
 
         {/* Notifications */}
         <button
-          className="relative w-8 h-8 flex items-center justify-center rounded-md transition-all hover:bg-white/[0.05]"
+          onClick={() => navigate('/secops/alerts')}
+          className="relative w-8 h-8 flex items-center justify-center rounded-md transition-all hover:bg-white/[0.05] cursor-pointer"
           style={{ background: 'rgba(11,20,36,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}
+          title={`${newAlertsCount} new alerts`}
         >
           <Bell size={14} className="text-fanos-muted" />
-          <span
-            className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-fanos-red text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2"
-            style={{ borderColor: '#0b1422' }}
-          >
-            7
-          </span>
+          {newAlertsCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 w-4 h-4 bg-fanos-red text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 animate-pulse"
+              style={{ borderColor: '#0b1422' }}
+            >
+              {newAlertsCount > 99 ? '99+' : newAlertsCount}
+            </span>
+          )}
         </button>
 
         {/* System health */}

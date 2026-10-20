@@ -1,11 +1,12 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.security import decode_token
 
-bearer = HTTPBearer(auto_error=True)
+bearer = HTTPBearer(auto_error=False)
 
 
 @dataclass(frozen=True)
@@ -16,8 +17,14 @@ class Principal:
 
 
 async def get_current_principal(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer),
 ) -> Principal:
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Please provide a valid Bearer token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     try:
         payload = decode_token(credentials.credentials)
         username = str(payload.get("sub") or "")
