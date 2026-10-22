@@ -56,3 +56,9 @@ backend/nb_audit_extracted.txt
 
 # Standalone subprojects / repositories
 fanos-waf/
+
+# Sensor and lab runtime states
+suricata-lab/sensor/runtime/
+suricata-lab/collector-state.json
+suricata-lab/collector.pid
+suricata-lab/logs/

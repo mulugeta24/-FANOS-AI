@@ -2,28 +2,56 @@ import os
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
+@dataclass
 class Settings:
-    eve_path: str = os.getenv("SURICATA_EVE_PATH", "")
-    backend_url: str = os.getenv("FANOS_SURICATA_URL", "")
-    ingest_token: str = os.getenv("FANOS_SURICATA_TOKEN", "")
-    sensor_id: str = os.getenv("SURICATA_SENSOR_ID", "ubuntu-suricata-01")
-    state_path: str = os.getenv("SURICATA_COLLECTOR_STATE", "collector-state.json")
-    poll_seconds: float = float(os.getenv("SURICATA_POLL_SECONDS", "1"))
-    retry_seconds: float = float(os.getenv("SURICATA_RETRY_SECONDS", "5"))
+    eve_path: str = ""
+    backend_url: str = ""
+    ingest_token: str = ""
+    sensor_id: str = "windows-suricata-01"
+    state_path: str = "collector-state.json"
+    poll_seconds: float = 1.0
+    retry_seconds: float = 5.0
+
+    def __post_init__(self):
+        if not self.eve_path:
+            self.eve_path = os.getenv("SURICATA_EVE_PATH", "")
+        if not self.backend_url:
+            self.backend_url = os.getenv("FANOS_SURICATA_URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
+        if not self.ingest_token:
+            self.ingest_token = os.getenv("FANOS_SURICATA_TOKEN", "") or os.getenv("SURICATA_INGEST_TOKEN", "")
+        if self.sensor_id == "windows-suricata-01":
+            self.sensor_id = os.getenv("SURICATA_SENSOR_ID", "windows-suricata-01")
+        if self.state_path == "collector-state.json":
+            self.state_path = os.getenv("SURICATA_COLLECTOR_STATE", "collector-state.json")
 
     @property
     def events_url(self) -> str:
-        return self.backend_url
+        if not self.backend_url:
+            return ""
+        base = self.backend_url.rstrip("/")
+        if base.endswith("/events"):
+            return base
+        if base.endswith("/flows"):
+            return base[:-6] + "/events"
+        if "/api/v1/suricata" in base:
+            return f"{base}/events"
+        return f"{base}/api/v1/suricata/events"
 
     @property
     def flows_url(self) -> str:
         explicit = os.getenv("FANOS_SURICATA_FLOW_URL")
         if explicit:
             return explicit
-        if self.backend_url.endswith("/events"):
-            return self.backend_url[:-7] + "/flows"
-        return f"{self.backend_url.rstrip('/')}/flows"
+        if not self.backend_url:
+            return ""
+        base = self.backend_url.rstrip("/")
+        if base.endswith("/flows"):
+            return base
+        if base.endswith("/events"):
+            return base[:-7] + "/flows"
+        if "/api/v1/suricata" in base:
+            return f"{base}/flows"
+        return f"{base}/api/v1/suricata/flows"
 
 
 settings = Settings()

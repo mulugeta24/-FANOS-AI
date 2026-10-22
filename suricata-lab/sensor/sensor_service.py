@@ -165,10 +165,16 @@ class SensorManagerProcess:
         environment["FANOS_BACKEND_URL"] = self.backend_url
         environment["FANOS_SENSOR_STATUS_FILE"] = str(self.status_path)
         self.status_path.parent.mkdir(parents=True, exist_ok=True)
-        manager_log = self.status_path.with_name("sensor-manager.log")
-        self.log_handle = manager_log.open("a", encoding="utf-8")
+        python_bin = sys.executable
+        if "pythonservice" in Path(python_bin).name.lower():
+            candidate = Path(python_bin).with_name("python.exe")
+            if candidate.exists():
+                python_bin = str(candidate)
+            else:
+                python_bin = "python"
+
         self.process = subprocess.Popen(
-            [sys.executable, "-u", str(SENSOR_ROOT / "sensor_manager.py"), "--service-control"],
+            [python_bin, "-u", str(SENSOR_ROOT / "sensor_manager.py"), "--service-control"],
             cwd=str(SENSOR_ROOT),
             env=environment,
             stdin=subprocess.PIPE,

@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import argparse
 import json
 import os
@@ -13,9 +13,9 @@ SENSOR_ROOT = Path(__file__).resolve().parent
 LAB_ROOT = SENSOR_ROOT.parent
 COLLECTOR_ROOT = LAB_ROOT / "collector"
 
-SURICATA_EXE = Path(r"C:\Program Files\Suricata\suricata.exe")
-SURICATA_CONFIG = Path(r"C:\Program Files\Suricata\suricata.yaml")
-SURICATA_EVE = Path(r"C:\Program Files\Suricata\log\eve.json")
+SURICATA_EXE = Path(os.getenv("SURICATA_EXE", r"C:\Program Files\Suricata\suricata.exe"))
+SURICATA_CONFIG = Path(os.getenv("SURICATA_CONFIG", r"C:\Program Files\Suricata\suricata.yaml"))
+SURICATA_EVE = Path(os.getenv("SURICATA_EVE_PATH", r"C:\Program Files\Suricata\log\eve.json"))
 COLLECTOR_MAIN = COLLECTOR_ROOT / "app" / "main.py"
 
 CAPTURE_INTERFACE = "192.168.56.1"

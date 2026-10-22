@@ -130,6 +130,7 @@ async def get_attack_distribution(session: AsyncSession = Depends(get_async_sess
     try:
         query = (
             select(SecurityEvent.attack_type, func.count(SecurityEvent.id))
+            .where(SecurityEvent.attack_type.isnot(None))
             .group_by(SecurityEvent.attack_type)
             .order_by(func.count(SecurityEvent.id).desc())
             .limit(8)
@@ -140,7 +141,7 @@ async def get_attack_distribution(session: AsyncSession = Depends(get_async_sess
             palette = ["#ef4444", "#f97316", "#f59e0b", "#8b5cf6", "#3b82f6", "#00c8ff", "#00e5a0", "#4a6080"]
             return [
                 AttackDistributionItem(
-                    name=atk,
+                    name=atk or "Other",
                     value=max(1, round((cnt / total) * 100)),
                     color=palette[i % len(palette)],
                 )

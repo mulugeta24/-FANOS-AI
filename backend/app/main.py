@@ -116,7 +116,7 @@ async def health():
 
             latest_evt = (await session.execute(
                 select(SecurityEvent.created_at)
-                .where(SecurityEvent.sensor_source == "suricata")
+                .where(SecurityEvent.sensor_source.in_(["suricata", "suricata-flow"]))
                 .order_by(SecurityEvent.created_at.desc())
                 .limit(1)
             )).scalar_one_or_none()
@@ -143,6 +143,7 @@ async def health():
         "status": "healthy",
         "service": "FANOS AI Unified Platform",
         "version": settings.APP_VERSION,
+        "ai_engine": "active" if ml_ready else "degraded",
         "ai_network_engine": "active" if ml_ready else "degraded",
         "ml_url_detector": "active",
         "components": {

@@ -3,7 +3,7 @@ import json
 import logging
 import hashlib
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Literal
 import redis.asyncio as aioredis
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -15,7 +15,7 @@ from app.ai.risk_engine import RiskContext, risk_engine
 from app.ai.rule_engine import rule_engine
 from app.core.auth import Principal, get_current_principal
 from app.db.base import get_async_session
-from app.models.security import SecurityEvent
+from app.models.security import SecurityEvent, SensorLifecycle, SensorCommand, SensorAuditLog
 # Asset and Organization models not yet implemented
 # from app.models.security import Asset, Organization
 from app.schemas.security import SecurityEventOut
@@ -263,18 +263,27 @@ async def _persist_event(event: SuricataEventIngestion, session: AsyncSession) -
         event.event_id, ml.prediction, ml.confidence, ml.risk_score, ml.inference_ms,
     )
 
-    # ── 4. Resolve severity: prefer ML risk level, fallback to Suricata severity ──
-    # Use ML risk level when model is loaded; otherwise fall back to Suricata-derived severity
-    if ml.model_status == "loaded":
-        severity = ml.risk_level
-        attack_type = ml.attack_type if ml.is_malicious else _attack_type(event)
+    # ── 4. Resolve severity: clearly distinguish Suricata rule vs ML prediction ──
+    suricata_severity = _severity(event.severity)
+    suricata_attack = _attack_type(event)
+    _SEV_WEIGHT = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "INFO": 0}
+
+    if ml.model_status == "loaded" and ml.is_malicious:
+        # If ML model predicted a malicious attack, correlate and take the higher severity
+        ml_sev = ml.risk_level
+        if _SEV_WEIGHT.get(ml_sev, 0) >= _SEV_WEIGHT.get(suricata_severity, 0):
+            severity = ml_sev
+            attack_type = ml.attack_type
+        else:
+            severity = suricata_severity
+            attack_type = suricata_attack
         ai_confidence = ml.confidence * 100.0 if ml.confidence <= 1.0 else ml.confidence
-        risk_score = ml.risk_score
+        risk_score = max(ml.risk_score, 100 - event.severity * 15)
     else:
-        # Graceful degradation: rule engine + heuristic risk
-        severity = _severity(event.severity)
-        attack_type = _attack_type(event)
-        ai_confidence = max(25.0, 100.0 - event.severity * 15.0)
+        # Suricata signature rule alert is authoritative
+        severity = suricata_severity
+        attack_type = suricata_attack
+        ai_confidence = ml.confidence * 100.0 if (ml.model_status == "loaded" and ml.confidence > 0) else max(25.0, 100.0 - event.severity * 15.0)
         risk_score = risk_engine.compute(RiskContext(
             ai_confidence=ai_confidence,
             ai_attack_type=attack_type,
@@ -291,7 +300,32 @@ async def _persist_event(event: SuricataEventIngestion, session: AsyncSession) -
     if event.destination_port is not None:
         target = f"{target}:{event.destination_port}"
 
-    # ── 6. Persist ────────────────────────────────────────────────────
+    # ── 6. Build enriched raw_payload preserving both Suricata rule & ML telemetry ─
+    payload_dict = dict(event.raw_event) if isinstance(event.raw_event, dict) and event.raw_event else event.model_dump(mode="json")
+    payload_dict["suricata_detection"] = {
+        "signature": event.signature,
+        "signature_id": event.signature_id,
+        "category": event.category,
+        "severity": suricata_severity,
+        "action": event.action,
+        "source_port": event.source_port,
+        "destination_port": event.destination_port,
+        "protocol": event.protocol,
+    }
+    payload_dict["ml_analysis"] = {
+        "model_name": ml.model_name,
+        "model_version": ml.model_version,
+        "model_status": ml.model_status,
+        "prediction": ml.prediction,
+        "predicted_class": ml.predicted_class,
+        "confidence": round(ai_confidence, 2),
+        "is_malicious": ml.is_malicious,
+        "risk_level": ml.risk_level,
+        "risk_score": ml.risk_score,
+        "inference_ms": ml.inference_ms,
+    }
+
+    # ── 7. Persist ────────────────────────────────────────────────────
     record = SecurityEvent(
         severity=severity,
         attack_type=attack_type,
@@ -300,7 +334,7 @@ async def _persist_event(event: SuricataEventIngestion, session: AsyncSession) -
         ai_confidence=round(ai_confidence, 2),
         risk_score=risk_score,
         status="BLOCKED" if event.action.upper() in {"DROP", "BLOCK"} else "ALERT",
-        raw_payload=json.dumps(event.raw_event or event.model_dump(mode="json")),
+        raw_payload=json.dumps(payload_dict),
         sensor_source="suricata",
         created_at=_parse_timestamp(event.timestamp),
     )
@@ -535,7 +569,7 @@ async def get_suricata_events(
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
     query = (
         select(SecurityEvent)
-        .where(SecurityEvent.sensor_source == "suricata")
+        .where(SecurityEvent.sensor_source.in_(["suricata", "suricata-flow"]))
         .where(SecurityEvent.created_at >= cutoff)
         .order_by(SecurityEvent.created_at.desc())
         .limit(limit)
@@ -557,7 +591,7 @@ async def get_suricata_stats(
 ):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
     base = select(func.count(SecurityEvent.id)).where(
-        SecurityEvent.sensor_source == "suricata",
+        SecurityEvent.sensor_source.in_(["suricata", "suricata-flow"]),
         SecurityEvent.created_at >= cutoff,
     )
     if principal.role not in ("admin", "analyst"):

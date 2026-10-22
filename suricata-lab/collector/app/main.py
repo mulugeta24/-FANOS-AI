@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 
 from .config import settings
@@ -31,6 +32,9 @@ async def run() -> None:
         raise RuntimeError("SURICATA_EVE_PATH must match the native Windows Suricata eve-log filename")
     state_path = Path(settings.state_path)
     offset, inode, seen = load_state(state_path)
+    tail_only = os.getenv("SURICATA_TAIL_ONLY", "false").lower() in ("true", "1", "yes")
+    initial_check = True
+
     while True:
         path = Path(settings.eve_path)
         if not path.exists():
@@ -39,6 +43,13 @@ async def run() -> None:
         try:
             file_stat = path.stat()
             current_inode = getattr(file_stat, "st_ino", 0)
+            if initial_check:
+                initial_check = False
+                if tail_only and not state_path.exists():
+                    offset = file_stat.st_size
+                    inode = current_inode
+                    save_state(state_path, offset, inode, seen)
+                    logger.info("Starting collector at end of file to read only newly appended events (offset=%d)", offset)
             if current_inode != inode or file_stat.st_size < offset:
                 offset = 0
                 inode = current_inode

@@ -25,13 +25,13 @@ class PaginatedResponse(BaseModel):
 # ──────────────────────────────────────────────
 class SecurityEventOut(BaseModel):
     id:            uuid.UUID
-    severity:      str
-    attack_type:   str
-    source_ip:     str
-    target:        str
-    ai_confidence: float
-    risk_score:    int
-    status:        str
+    severity:      Optional[str] = "INFO"
+    attack_type:   Optional[str] = "Normal"
+    source_ip:     Optional[str] = "0.0.0.0"
+    target:        Optional[str] = "0.0.0.0"
+    ai_confidence: Optional[float] = 0.0
+    risk_score:    Optional[int] = 0
+    status:        Optional[str] = "ALERT"
     sensor_source: Optional[str] = None
     raw_payload:   Optional[str] = None
     created_at:    datetime

@@ -62,7 +62,8 @@ class MLPrediction:
     predicted_class:    str = "BENIGN"
     raw_label:          str = "BENIGN"
     prediction:         str = "Normal"               # display name
-    confidence:         float = 0.0                 # max(probabilities)
+    confidence:         float = 0.0                 # Percentage score [0.0, 100.0]
+    raw_probability:    float = 0.0                 # Raw model probability [0.0, 1.0]
     probabilities:      Dict[str, float] = field(default_factory=dict)
     class_probabilities: List[float] = field(default_factory=list)
 
@@ -334,7 +335,8 @@ class FANOSPredictor:
             predicted_class=raw_label,
             raw_label=raw_label,
             prediction=display,
-            confidence=round(max_prob, 6),
+            confidence=round(confidence, 2),
+            raw_probability=round(max_prob, 6),
             probabilities=prob_dict,
             class_probabilities=raw_prob_list,
             is_malicious=malicious and confidence >= 50.0,
