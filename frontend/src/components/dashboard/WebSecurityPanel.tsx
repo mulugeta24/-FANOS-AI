@@ -1,8 +1,10 @@
 import { Globe, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useWebSecurityStats } from '@/hooks/useDashboard'
 import { mockWebSecurity } from '@/lib/mockData'
 
 export default function WebSecurityPanel() {
+  const navigate = useNavigate()
   const { data: w = mockWebSecurity } = useWebSecurityStats()
   const maxCount = Math.max(...w.attack_types.map(a => a.count), 1)
 
@@ -52,9 +54,12 @@ export default function WebSecurityPanel() {
       </div>
 
       <div className="px-3 pb-3">
-        <button className="fanos-btn w-full justify-center gap-1.5">
+        <button 
+          onClick={() => navigate('/secops/web/waf')}
+          className="fanos-btn w-full justify-center gap-1.5"
+        >
           <ExternalLink size={11} />
-          OPEN WEB SECURITY
+          OPEN UNIFIED WAF CONSOLE
         </button>
       </div>
     </div>

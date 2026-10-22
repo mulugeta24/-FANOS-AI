@@ -1,4 +1,5 @@
 import { Shield, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { usePreventionStatus } from '@/hooks/useDashboard'
 import { mockPrevention } from '@/lib/mockData'
 
@@ -14,6 +15,7 @@ function StatTile({ label, value, color }: StatTileProps) {
 }
 
 export default function PreventionPanel() {
+  const navigate = useNavigate()
   const { data: p = mockPrevention } = usePreventionStatus()
 
   return (
@@ -45,9 +47,12 @@ export default function PreventionPanel() {
       </div>
 
       <div className="px-3 pb-3">
-        <button className="fanos-btn w-full justify-center gap-1.5">
+        <button 
+          onClick={() => navigate('/secops/web/waf')}
+          className="fanos-btn w-full justify-center gap-1.5"
+        >
           <ExternalLink size={11} />
-          MANAGE PREVENTION
+          MANAGE WAF & PREVENTION
         </button>
       </div>
     </div>

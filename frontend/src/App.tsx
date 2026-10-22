@@ -178,7 +178,7 @@ export default function App() {
         <Route path="/prevention/blocking"  element={<Placeholder title="Active Blocking"      icon="Shield"      color="green"  desc="Real-time threat blocking across network, web, and host layers with automated prevention engine." />} />
         <Route path="/prevention/ips"       element={<BlockedIPs />} />
         <Route path="/prevention/sessions"  element={<Placeholder title="Blocked Sessions"     icon="WifiOff"     color="orange" desc="Active session blocks applied by the FANOS AI response engine for brute force and session hijack attempts." />} />
-        <Route path="/prevention/waf"       element={<Placeholder title="WAF Protection"       icon="ShieldCheck" color="blue"   desc="ModSecurity Web Application Firewall rules, triggers, and bypass attempts. OWASP CRS integration." />} />
+        <Route path="/prevention/waf"       element={<WAFPage />} />
         <Route path="/prevention/isolation" element={<Placeholder title="Endpoint Isolation"   icon="Shield"      color="red"    desc="Isolated endpoints quarantined by FANOS AI automated response. View isolation status, reason, and re-join approvals." />} />
         <Route path="/prevention/rules"     element={<Placeholder title="Prevention Rules"     icon="List"        color="purple" desc="Configure automated response rules: IP block thresholds, rate limiting, geo-blocking policies." />} />
         <Route path="/response/playbooks"   element={<Placeholder title="Response Playbooks"   icon="BookOpen"    color="blue"   desc="Configure and manage automated incident response playbooks. Define trigger conditions, action sequences, and escalation paths." />} />

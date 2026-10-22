@@ -40,7 +40,33 @@ class EventService:
         # Serialize findings safely
         findings_data = [f.model_dump() for f in response.findings]
 
+        # Derive unified platform event fields
+        highest_category = response.findings[0].category if response.findings else None
+        if response.risk_score >= 80:
+            severity_val = "CRITICAL"
+        elif response.risk_score >= 60:
+            severity_val = "HIGH"
+        elif response.risk_score >= 40:
+            severity_val = "MEDIUM"
+        elif response.risk_score > 0:
+            severity_val = "LOW"
+        else:
+            severity_val = "INFO"
+
+        attack_type_val = highest_category or ("Normal Traffic" if response.risk_score == 0 else "Suspicious Web Request")
+        source_ip_val = response.client_ip or "127.0.0.1"
+        target_val = f"{hostname or ''}{response.path}"
+        confidence_val = float(min(99.9, max(50.0, response.risk_score * 1.05))) if response.risk_score > 0 else 99.9
+        status_val = "BLOCKED" if response.decision.value == "BLOCK" else ("MONITORED" if response.decision.value == "MONITOR" else "ALLOWED")
+
         event = SecurityEventModel(
+            severity=severity_val,
+            attack_type=attack_type_val,
+            source_ip=source_ip_val,
+            target=target_val,
+            ai_confidence=confidence_val,
+            status=status_val,
+            sensor_source="WAF",
             request_id=response.request_id,
             timestamp=response.timestamp,
             client_ip=response.client_ip,

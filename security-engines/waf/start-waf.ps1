@@ -1,13 +1,13 @@
-# ──────────────────────────────────────────────────────────────
+﻿# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # FANOS WAF Startup Script
-# ──────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # This script starts the WAF services and ensures they're properly
 # configured.
 #
 # Usage: .\start-waf.ps1
 # From:  security-engines\waf\
-# ──────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 param(
     [switch]$Verbose
@@ -16,16 +16,16 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║       FANOS WAF — Startup Script                 ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—" -ForegroundColor Cyan
+Write-Host "â•‘       FANOS WAF â€” Startup Script                 â•‘" -ForegroundColor Cyan
+Write-Host "â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 Write-Host ""
 
 # Navigate to project root
 $ProjectRoot = (Get-Item "$PSScriptRoot\..\..\").FullName
 Write-Host "Project root: $ProjectRoot" -ForegroundColor Gray
 
-# ── Step 1: Start WAF services ──────────────────────────────
+# â”€â”€ Step 1: Start WAF services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host ""
 Write-Host "Starting WAF services..." -ForegroundColor Yellow
 
@@ -33,13 +33,13 @@ Set-Location $ProjectRoot
 docker compose up -d waf-test-app waf
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "✗ Failed to start WAF services" -ForegroundColor Red
+    Write-Host "âœ— Failed to start WAF services" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✓ WAF containers started" -ForegroundColor Green
+Write-Host "âœ“ WAF containers started" -ForegroundColor Green
 
-# ── Step 2: Fix nginx in test-app (Windows issue workaround) ─
+# â”€â”€ Step 2: Fix nginx in test-app (Windows issue workaround) â”€
 Write-Host ""
 Write-Host "Ensuring nginx is running in test-app container..." -ForegroundColor Yellow
 
@@ -49,13 +49,13 @@ Start-Sleep -Seconds 3
 docker exec fanos-waf-test-app sh -c "killall nginx 2>/dev/null || true; nginx"
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "✗ Failed to start nginx in test-app" -ForegroundColor Red
+    Write-Host "âœ— Failed to start nginx in test-app" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✓ nginx started in test-app" -ForegroundColor Green
+Write-Host "âœ“ nginx started in test-app" -ForegroundColor Green
 
-# ── Step 3: Copy test HTML file into container ───────────────
+# â”€â”€ Step 3: Copy test HTML file into container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host ""
 Write-Host "Copying test application files..." -ForegroundColor Yellow
 
@@ -64,12 +64,12 @@ $TestAppPath = Join-Path $ProjectRoot "security-engines\waf\tests\test-app"
 docker cp "$TestAppPath\index.html" fanos-waf-test-app:/usr/share/nginx/html/index.html
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "⚠ Warning: Could not copy test HTML file" -ForegroundColor Yellow
+    Write-Host "âš  Warning: Could not copy test HTML file" -ForegroundColor Yellow
 } else {
-    Write-Host "✓ Test application files copied" -ForegroundColor Green
+    Write-Host "âœ“ Test application files copied" -ForegroundColor Green
 }
 
-# ── Step 4: Fix WAF nginx config (remove root directive) ─────
+# â”€â”€ Step 4: Fix WAF nginx config (remove root directive) â”€â”€â”€â”€â”€
 Write-Host ""
 Write-Host "Fixing WAF nginx configuration..." -ForegroundColor Yellow
 
@@ -128,7 +128,7 @@ server {
 EOF'
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "✗ Failed to update nginx config" -ForegroundColor Red
+    Write-Host "âœ— Failed to update nginx config" -ForegroundColor Red
     exit 1
 }
 
@@ -136,13 +136,13 @@ if ($LASTEXITCODE -ne 0) {
 docker exec fanos-waf nginx -s reload
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "✗ Failed to reload nginx" -ForegroundColor Red
+    Write-Host "âœ— Failed to reload nginx" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✓ WAF nginx configuration fixed and reloaded" -ForegroundColor Green
+Write-Host "âœ“ WAF nginx configuration fixed and reloaded" -ForegroundColor Green
 
-# ── Step 4: Wait for WAF to be healthy ──────────────────────
+# â”€â”€ Step 4: Wait for WAF to be healthy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host ""
 Write-Host "Waiting for WAF to become healthy..." -ForegroundColor Yellow
 
@@ -166,39 +166,35 @@ while ($elapsed -lt $maxWait) {
 }
 
 if (-not $healthy) {
-    Write-Host "⚠ WAF did not respond within $maxWait seconds" -ForegroundColor Yellow
+    Write-Host "âš  WAF did not respond within $maxWait seconds" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Container status:" -ForegroundColor Yellow
     docker compose ps waf-test-app waf
     Write-Host ""
     Write-Host "Try running: docker logs fanos-waf" -ForegroundColor Gray
 } else {
-    Write-Host "✓ WAF is healthy and responding" -ForegroundColor Green
+    Write-Host "âœ“ WAF is healthy and responding" -ForegroundColor Green
 }
 
-# ── Step 5: Show status ──────────────────────────────────────
+# â”€â”€ Step 5: Show status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host ""
 Write-Host "Container status:" -ForegroundColor Yellow
 docker compose ps waf-test-app waf
 
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║  ✓ FANOS WAF is running                          ║" -ForegroundColor Green
-Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
-Write-Host "WAF URL:        http://localhost:8080/" -ForegroundColor Cyan
-Write-Host "Test app:       Served by fanos-waf-test-app container" -ForegroundColor Cyan
+Write-Host "WAF URL: http://localhost:8080/" -ForegroundColor Cyan
+Write-Host "Test app: Served by fanos-waf-test-app container" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Quick tests:" -ForegroundColor White
-Write-Host "  Normal request:  curl.exe http://localhost:8080/" -ForegroundColor Gray
-Write-Host "  SQL injection:   curl.exe `"http://localhost:8080/?q=1' OR '1'='1`"" -ForegroundColor Gray
-Write-Host "  XSS attack:      curl.exe `"http://localhost:8080/?q=<script>alert(1)</script>`"" -ForegroundColor Gray
+Write-Host '  Normal request: curl.exe http://localhost:8080/' -ForegroundColor Gray
+Write-Host '  SQL injection: curl.exe "http://localhost:8080/?q=1%27%20OR%20%271%27%3D%271"' -ForegroundColor Gray
+Write-Host '  XSS test: curl.exe "http://localhost:8080/?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E"' -ForegroundColor Gray
 Write-Host ""
 Write-Host "View logs:" -ForegroundColor White
 Write-Host "  docker logs fanos-waf" -ForegroundColor Gray
 Write-Host "  docker logs fanos-waf-test-app" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Run tests:" -ForegroundColor White
-Write-Host "  .\security-engines\waf\tests\run_tests.ps1" -ForegroundColor Gray
+Write-Host '  .\security-engines\waf\tests\run_tests.ps1' -ForegroundColor Gray
 Write-Host ""
-

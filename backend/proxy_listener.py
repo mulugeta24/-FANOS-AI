@@ -20,8 +20,10 @@ logger = logging.getLogger("fanos_waf.listener")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting FANOS WAF Dedicated Traffic Listener on port 8002...")
-    await init_waf_db()
+    try:
+        await init_waf_db()
+    except Exception as e:
+        logger.warning(f"Database connection deferred or failed: {e}")
     yield
     logger.info("Shutting down FANOS WAF Traffic Listener...")
     await proxy_engine.aclose()

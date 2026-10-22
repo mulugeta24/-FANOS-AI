@@ -75,21 +75,21 @@ export function useLiveEvents(params: number | LiveEventsParams = 20) {
   })
 }
 
-export function useSuricataEvents(limit = 50, hours = 24, severity?: string) {
+export function useSuricataEvents(limit = 50, hours = 24, severity?: string, customInterval?: number | false) {
   return useQuery({
     queryKey: ['suricata', 'events', limit, hours, severity],
     queryFn:  () => getSuricataEvents(limit, hours, severity),
-    refetchInterval: LIVE_INTERVAL,
-    staleTime: LIVE_INTERVAL / 2,
+    refetchInterval: customInterval !== undefined ? customInterval : LIVE_INTERVAL,
+    staleTime: 1000,
   })
 }
 
-export function useSuricataStats(hours = 24) {
+export function useSuricataStats(hours = 24, customInterval?: number | false) {
   return useQuery({
     queryKey: ['suricata', 'stats', hours],
     queryFn:  () => getSuricataStats(hours),
-    refetchInterval: KPI_INTERVAL,
-    staleTime: KPI_INTERVAL / 2,
+    refetchInterval: customInterval !== undefined ? customInterval : KPI_INTERVAL,
+    staleTime: 1000,
   })
 }
 
