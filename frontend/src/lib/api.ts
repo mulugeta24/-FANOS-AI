@@ -84,6 +84,46 @@ export const getSuricataEvents = (limit = 50, hours = 24, severity?: string): Pr
 export const getSuricataStats = (hours = 24): Promise<SuricataStats> =>
   client.get(`/suricata/stats?hours=${hours}`).then((r) => r.data)
 
+export interface SuricataControlStatus {
+  mode: 'LIVE' | 'PAUSED' | 'OFFLINE'
+  is_live: boolean
+  is_paused: boolean
+  suricata_running: boolean
+  suricata_pid: number | null
+  collector_running: boolean
+  collector_pid: number | null
+  interface: string
+  sensor_id: string
+  ruleset: string
+  eve_path: string
+  eve_exists: boolean
+  eve_size_bytes: number
+  eve_size_mb: number
+  eve_last_modified: string | null
+  events_24h: number
+  alerts_24h: number
+  last_event_time: string | null
+  message?: string
+}
+
+export const getSuricataControlStatus = (): Promise<SuricataControlStatus> =>
+  client.get('/suricata/control/status').then((r) => r.data)
+
+export const startSuricataEngine = (): Promise<{ success: boolean; mode: string; message: string }> =>
+  client.post('/suricata/control/start').then((r) => r.data)
+
+export const pauseSuricataEngine = (): Promise<{ success: boolean; mode: string; message: string }> =>
+  client.post('/suricata/control/pause').then((r) => r.data)
+
+export const stopSuricataEngine = (stopSuricata = false): Promise<{ success: boolean; mode: string; message: string }> =>
+  client.post(`/suricata/control/stop?stop_suricata=${stopSuricata}`).then((r) => r.data)
+
+export const getSuricataLogs = (limit = 80): Promise<{ logs: string[] }> =>
+  client.get(`/suricata/control/logs?limit=${limit}`).then((r) => r.data)
+
+export const simulateSuricataAttack = (attackType = 'log4j'): Promise<any> =>
+  client.post(`/suricata/control/simulate?attack_type=${attackType}`).then((r) => r.data)
+
 // ──────────────────────────────────────────────
 // Incidents
 // ──────────────────────────────────────────────

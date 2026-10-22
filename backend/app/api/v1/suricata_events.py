@@ -2,6 +2,8 @@
 import json
 import logging
 import hashlib
+import os
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Literal
 import redis.asyncio as aioredis
@@ -611,3 +613,167 @@ async def get_suricata_stats(
         medium=counts["MEDIUM"],
         low=counts["LOW"],
     )
+
+
+# ──────────────────────────────────────────────────────────────────
+# Interactive Engine & Collector Process Controls (No terminal needed)
+# ──────────────────────────────────────────────────────────────────
+
+@router.get("/control/status")
+async def get_suricata_control_status(
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Inspect real-time Suricata process, collector state, and metrics."""
+    del principal
+    from app.services.suricata_service import SuricataProcessService
+    return await SuricataProcessService.get_status(session)
+
+
+@router.post("/control/start")
+async def start_suricata_control(
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Start or resume Suricata engine and telemetry collector in LIVE mode."""
+    del principal
+    from app.services.suricata_service import SuricataProcessService
+    return await SuricataProcessService.start(session, tail_recent=True)
+
+
+@router.post("/control/pause")
+async def pause_suricata_control(
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Pause telemetry collector ingestion without killing the daemon."""
+    del principal
+    from app.services.suricata_service import SuricataProcessService
+    return await SuricataProcessService.pause(session)
+
+
+@router.post("/control/stop")
+async def stop_suricata_control(
+    stop_suricata: bool = Query(default=False),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Completely stop telemetry collector (and optionally Suricata process)."""
+    del principal
+    from app.services.suricata_service import SuricataProcessService
+    return await SuricataProcessService.stop(session, stop_suricata=stop_suricata)
+
+
+@router.get("/control/logs")
+async def get_suricata_control_logs(
+    limit: int = Query(default=80, ge=10, le=300),
+    principal: Principal = Depends(get_current_principal),
+):
+    """Retrieve recent lines from the collector log for live UI diagnostics."""
+    del principal
+    from app.services.suricata_service import SuricataProcessService
+    return {"logs": SuricataProcessService.get_logs(limit=limit)}
+
+
+@router.post("/control/simulate")
+async def simulate_suricata_event(
+    attack_type: str = Query(default="log4j"),
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Simulate a realistic attack or flow event to verify live UI telemetry instantly."""
+    del principal
+    templates = {
+        "log4j": {
+            "signature": "ET EXPLOIT Apache Log4j RCE Attempt (CVE-2021-44228)",
+            "signature_id": 2034334,
+            "category": "Attempted Administrator Privilege Gain",
+            "severity": 1,
+            "src_ip": "198.51.100.24",
+            "src_port": 49832,
+            "dest_ip": "192.168.56.1",
+            "dest_port": 8080,
+            "action": "DROP",
+        },
+        "sqli": {
+            "signature": "ET WEB_SERVER Possible SQL Injection Attempt (UNION SELECT)",
+            "signature_id": 2010937,
+            "category": "Web Application Attack",
+            "severity": 2,
+            "src_ip": "203.0.113.88",
+            "src_port": 53210,
+            "dest_ip": "192.168.56.1",
+            "dest_port": 80,
+            "action": "ALERT",
+        },
+        "nmap": {
+            "signature": "ET SCAN Nmap Scripting Engine User-Agent Detected",
+            "signature_id": 2009582,
+            "category": "Attempted Information Leak",
+            "severity": 3,
+            "src_ip": "192.168.56.103",
+            "src_port": 45708,
+            "dest_ip": "192.168.56.1",
+            "dest_port": 443,
+            "action": "ALERT",
+        },
+        "flow": {
+            "signature": "FANOS AI Anomaly High-Volume Flow Burst",
+            "signature_id": 1000002,
+            "category": "Atypical Traffic Flow",
+            "severity": 2,
+            "src_ip": "10.0.8.55",
+            "src_port": 38290,
+            "dest_ip": "192.168.56.1",
+            "dest_port": 9000,
+            "action": "ALERT",
+        },
+    }
+    tmpl = templates.get(attack_type.lower(), templates["log4j"])
+    now = datetime.now(timezone.utc)
+    event_id = f"sim-{int(time.time()*1000)}-{os.urandom(3).hex()}"
+    event = SuricataEventIngestion(
+        event_id=event_id,
+        timestamp=now,
+        event_type="alert",
+        source_ip=tmpl["src_ip"],
+        source_port=tmpl["src_port"],
+        destination_ip=tmpl["dest_ip"],
+        destination_port=tmpl["dest_port"],
+        protocol="TCP",
+        signature=tmpl["signature"],
+        signature_id=tmpl["signature_id"],
+        category=tmpl["category"],
+        severity=tmpl["severity"],
+        action=tmpl["action"],
+        sensor_id="windows-suricata-01",
+        raw_event={
+            "timestamp": now.isoformat(),
+            "event_type": "alert",
+            "src_ip": tmpl["src_ip"],
+            "src_port": tmpl["src_port"],
+            "dest_ip": tmpl["dest_ip"],
+            "dest_port": tmpl["dest_port"],
+            "proto": "TCP",
+            "alert": {
+                "action": tmpl["action"].lower(),
+                "gid": 1,
+                "signature_id": tmpl["signature_id"],
+                "rev": 1,
+                "signature": tmpl["signature"],
+                "category": tmpl["category"],
+                "severity": tmpl["severity"],
+            },
+            "simulated": True,
+        },
+    )
+    record = await _persist_event(event, session)
+    return {
+        "success": True,
+        "message": f"Simulated {tmpl['signature']} injected successfully",
+        "event_id": str(record.id),
+        "attack_type": record.attack_type,
+        "severity": record.severity,
+        "risk_score": record.risk_score,
+        "ai_confidence": record.ai_confidence,
+    }

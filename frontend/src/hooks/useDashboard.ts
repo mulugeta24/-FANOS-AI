@@ -24,6 +24,12 @@ import {
   LiveEventsParams,
   getSuricataEvents,
   getSuricataStats,
+  getSuricataControlStatus,
+  startSuricataEngine,
+  pauseSuricataEngine,
+  stopSuricataEngine,
+  simulateSuricataAttack,
+  getSuricataLogs,
 } from '@/lib/api'
 import type { Incident } from '@/types'
 
@@ -84,6 +90,71 @@ export function useSuricataStats(hours = 24) {
     queryFn:  () => getSuricataStats(hours),
     refetchInterval: KPI_INTERVAL,
     staleTime: KPI_INTERVAL / 2,
+  })
+}
+
+export function useSuricataControlStatus(pollingInterval = 3_000) {
+  return useQuery({
+    queryKey: ['suricata', 'control', 'status'],
+    queryFn:  () => getSuricataControlStatus(),
+    refetchInterval: pollingInterval,
+    staleTime: 1_500,
+  })
+}
+
+export function useStartSuricataEngine() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => startSuricataEngine(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suricata'] })
+      queryClient.invalidateQueries({ queryKey: ['sensors'] })
+      queryClient.invalidateQueries({ queryKey: ['system', 'health'] })
+    },
+  })
+}
+
+export function usePauseSuricataEngine() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => pauseSuricataEngine(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suricata'] })
+      queryClient.invalidateQueries({ queryKey: ['sensors'] })
+      queryClient.invalidateQueries({ queryKey: ['system', 'health'] })
+    },
+  })
+}
+
+export function useStopSuricataEngine() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (stopSuricata?: boolean) => stopSuricataEngine(stopSuricata),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suricata'] })
+      queryClient.invalidateQueries({ queryKey: ['sensors'] })
+      queryClient.invalidateQueries({ queryKey: ['system', 'health'] })
+    },
+  })
+}
+
+export function useSimulateSuricataAttack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (attackType?: string) => simulateSuricataAttack(attackType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suricata'] })
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+    },
+  })
+}
+
+export function useSuricataLogs(limit = 80, enabled = false) {
+  return useQuery({
+    queryKey: ['suricata', 'control', 'logs', limit],
+    queryFn:  () => getSuricataLogs(limit),
+    enabled,
+    refetchInterval: 3_000,
   })
 }
 
