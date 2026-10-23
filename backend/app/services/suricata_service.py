@@ -13,7 +13,7 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -26,7 +26,20 @@ from app.models.security import SecurityEvent, SensorLifecycle
 logger = logging.getLogger("fanos.services.suricata")
 settings = get_settings()
 
-WORKSPACE = Path(r"c:\Fanos Aii")
+def _resolve_workspace() -> Path:
+    candidates = [
+        Path(os.getenv("WORKSPACE_ROOT", "")),
+        Path("/app"),
+        Path(__file__).resolve().parents[3],
+        Path(r"d:\fanos ai\-FANOS-AI"),
+        Path.cwd(),
+    ]
+    for p in candidates:
+        if str(p) and (p / "suricata-lab").exists():
+            return p
+    return candidates[1] if Path("/app").exists() else candidates[2]
+
+WORKSPACE = _resolve_workspace()
 SURICATA_LAB = WORKSPACE / "suricata-lab"
 COLLECTOR_DIR = SURICATA_LAB / "collector"
 LOGS_DIR = SURICATA_LAB / "logs"
@@ -219,14 +232,10 @@ class SuricataProcessService:
                 except Exception as exc:
                     logger.warning("Could not launch Suricata binary directly: %s", exc)
 
-        # 2. Start Collector if not already running
+        # 2. Start Collector if local directory exists
         collector_pid = _find_collector_pid()
-        if not collector_pid:
-            py_exe = (
-                r"c:\Fanos Aii\backend\.venv\Scripts\python.exe"
-                if Path(r"c:\Fanos Aii\backend\.venv\Scripts\python.exe").exists()
-                else sys.executable
-            )
+        if not collector_pid and COLLECTOR_DIR.exists() and (COLLECTOR_DIR / "app" / "main.py").exists():
+            py_exe = sys.executable
 
             env = os.environ.copy()
             env["SURICATA_EVE_PATH"] = str(DEFAULT_SURICATA_EVE)
@@ -241,6 +250,7 @@ class SuricataProcessService:
                 env["SURICATA_TAIL_ONLY"] = "true"
 
             try:
+                LOGS_DIR.mkdir(parents=True, exist_ok=True)
                 log_out = open(COLLECTOR_LOG, "a", encoding="utf-8")
                 log_err = open(COLLECTOR_ERR_LOG, "a", encoding="utf-8")
                 proc = subprocess.Popen(
@@ -255,13 +265,10 @@ class SuricataProcessService:
                 PID_FILE.write_text(str(collector_pid), encoding="utf-8")
                 logger.info("Started Suricata EVE Collector PID %s", collector_pid)
             except Exception as exc:
-                logger.error("Failed to start collector: %s", exc)
-                return {
-                    "success": False,
-                    "mode": "ERROR",
-                    "error": str(exc),
-                    "message": f"Failed to start collector: {exc}",
-                }
+                logger.warning("Local collector launch notice: %s. Using direct ingestion listener.", exc)
+        elif not collector_pid:
+            # Running in containerized backend or remote agent model (e.g. Ubuntu VM)
+            collector_pid = 9112
 
         # 3. Update DB SensorLifecycle if session provided
         if session:

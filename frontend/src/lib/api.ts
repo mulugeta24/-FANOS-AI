@@ -126,12 +126,12 @@ export const simulateSuricataAttack = (attackType = 'log4j'): Promise<any> =>
 
 export const sendSuricataTestFlow = (flowData: any): Promise<any> =>
   client.post('/suricata/flows', flowData, {
-    headers: { 'X-Fanos-Suricata-Token': 'fanos_suricata_secret_token_2026' }
+    headers: { 'X-Fanos-Suricata-Token': 'ce8eb0468b7d7f8ad89b02b27271e364fbb60518ae194f43c95c6c62addfd318' }
   }).then((r) => r.data)
 
 export const sendSuricataTestEvent = (eventData: any): Promise<any> =>
   client.post('/suricata/events', eventData, {
-    headers: { 'X-Fanos-Suricata-Token': 'fanos_suricata_secret_token_2026' }
+    headers: { 'X-Fanos-Suricata-Token': 'ce8eb0468b7d7f8ad89b02b27271e364fbb60518ae194f43c95c6c62addfd318' }
   }).then((r) => r.data)
 
 // ──────────────────────────────────────────────

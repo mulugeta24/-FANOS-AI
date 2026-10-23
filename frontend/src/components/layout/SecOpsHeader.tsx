@@ -15,7 +15,7 @@ const BREADCRUMBS: Record<string, string> = {
   '/secops/investigations':      'Investigations',
   '/secops/events':              'Security Events',
   '/secops/network/zeek':        'Zeek — Network Security',
-  '/secops/network/suricata':    'Suricata — Network IDS',
+  '/secops/network/suricata':    'Suricata + XGBoost — Network IDS',
   '/secops/web/waf':             'WAF — Web Security',
   '/secops/threat-intel':        'Threat Intelligence',
   '/secops/assets':              'Assets',

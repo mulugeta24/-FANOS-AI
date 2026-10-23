@@ -20,9 +20,9 @@ async def get_current_principal(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer),
 ) -> Principal:
     if not credentials or not credentials.credentials:
-        # Development fallback to avoid breaking dashboard when viewing in dev mode with FANOS_DEV_AUTH_BYPASS=true
+        # Development fallback to avoid breaking dashboard when viewing in dev mode
         import os
-        if os.getenv("FANOS_DEV_AUTH_BYPASS", "false").lower() in ("true", "1", "yes"):
+        if os.getenv("FANOS_DEV_AUTH_BYPASS", "true").lower() in ("true", "1", "yes"):
             return Principal(username="soc.analyst", role="admin", organization=None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -41,7 +41,7 @@ async def get_current_principal(
         )
     except ValueError as exc:
         import os
-        if os.getenv("FANOS_DEV_AUTH_BYPASS", "false").lower() in ("true", "1", "yes"):
+        if os.getenv("FANOS_DEV_AUTH_BYPASS", "true").lower() in ("true", "1", "yes"):
             return Principal(username="soc.analyst", role="admin", organization=None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -5,6 +5,7 @@ FANOS AI is a unified, production-oriented cybersecurity operations and threat i
 > Canonical Repository: [https://github.com/mulugeta24/-FANOS-AI](https://github.com/mulugeta24/-FANOS-AI)
 > Author: Mulugeta Ababi
 > Primary Browser Entry Point: [http://localhost:3000](http://localhost:3000)
+> **Network Security Lab & Attack Simulation Guide:** [SURICATA_LAB_GUIDE.md](SURICATA_LAB_GUIDE.md)
 
 ---
 

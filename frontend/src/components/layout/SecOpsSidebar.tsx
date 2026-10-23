@@ -47,8 +47,7 @@ const EXPANDABLE: ExpandableGroup[] = [
     color:    '#00c8ff',
     basePath: '/secops/network',
     items: [
-      { label: 'Zeek',     to: '/secops/network/zeek',     icon: <span className="text-[10px] font-bold">Z</span> },
-      { label: 'Suricata', to: '/secops/network/suricata', icon: <span className="text-[10px] font-bold">S</span> },
+      { label: 'Suricata + XGBoost', to: '/secops/network/suricata', icon: <span className="text-[10px] font-bold">S+</span>, badge: 'IDS' },
     ],
   },
   {
@@ -93,9 +92,9 @@ function NavItem({ item }: { item: NavItem }) {
         <span
           className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
           style={{
-            background: item.badge === 'NEW'     ? 'rgba(139,92,246,0.15)' : 'rgba(239,68,68,0.15)',
-            color:      item.badge === 'NEW'     ? '#8b5cf6' : '#ef4444',
-            border:     `1px solid ${item.badge === 'NEW' ? 'rgba(139,92,246,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            background: item.badge === 'IDS' ? 'rgba(0,200,255,0.15)' : item.badge === 'NEW' ? 'rgba(139,92,246,0.15)' : 'rgba(239,68,68,0.15)',
+            color:      item.badge === 'IDS' ? '#00c8ff' : item.badge === 'NEW' ? '#8b5cf6' : '#ef4444',
+            border:     `1px solid ${item.badge === 'IDS' ? 'rgba(0,200,255,0.35)' : item.badge === 'NEW' ? 'rgba(139,92,246,0.3)' : 'rgba(239,68,68,0.3)'}`,
           }}
         >
           {item.badge}

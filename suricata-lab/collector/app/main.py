@@ -32,7 +32,7 @@ async def run() -> None:
         raise RuntimeError("SURICATA_EVE_PATH must match the native Windows Suricata eve-log filename")
     state_path = Path(settings.state_path)
     offset, inode, seen = load_state(state_path)
-    tail_only = os.getenv("SURICATA_TAIL_ONLY", "false").lower() in ("true", "1", "yes")
+    tail_only = os.getenv("SURICATA_TAIL_ONLY", "true").lower() in ("true", "1", "yes")
     initial_check = True
 
     while True:

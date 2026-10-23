@@ -35,6 +35,13 @@ class SecurityEventOut(BaseModel):
     sensor_source: Optional[str] = None
     raw_payload:   Optional[str] = None
     created_at:    datetime
+    timestamp:     Optional[datetime] = None
+    client_ip:     Optional[str] = None
+    hostname:      Optional[str] = None
+    method:        Optional[str] = None
+    path:          Optional[str] = None
+    action:        Optional[str] = None
+    decision:      Optional[str] = None
 
     model_config = {"from_attributes": True}
 
