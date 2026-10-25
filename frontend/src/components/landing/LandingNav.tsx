@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
+import FanosLogo from '@/components/common/FanosLogo'
 
 /* ── Mega menu data ─────────────────────────────────────── */
 const PLATFORM = {
@@ -254,22 +255,8 @@ export default function LandingNav() {
     <nav ref={navRef} className={`lp-nav ${scrolled ? 'scrolled' : ''}`}>
       {/* Brand */}
       <button onClick={() => scrollToSection('hero')}
-        className="flex items-center gap-2.5 text-left flex-shrink-0 cursor-pointer">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg,#0d2a45,#0a3d62)', border: '1px solid rgba(34,211,238,0.35)' }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L4 6.5V12c0 5 3.58 9.6 8 10.93C16.42 21.6 20 17 20 12V6.5L12 2Z"
-              stroke="#22D3EE" strokeWidth="1.5" strokeLinejoin="round" fill="rgba(34,211,238,0.07)"/>
-            <path d="M9 12l2.5 2.5L15 9" stroke="#10B981" strokeWidth="1.8"
-              strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-        <div>
-          <div className="text-[17px] font-extrabold text-white tracking-wide leading-tight">
-            FANOS <span style={{ color: '#22D3EE' }}>AI</span>
-          </div>
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">AI Cyber Defense</div>
-        </div>
+        className="flex items-center text-left flex-shrink-0 cursor-pointer hover:opacity-95 transition-opacity">
+        <FanosLogo size={42} subtitle="AI Cyber Defense" subtitleClass="text-cyan-400" />
       </button>
 
       {/* Nav links */}
@@ -333,28 +320,14 @@ export default function LandingNav() {
           </div>
         </NavItem>
 
-        {/* Resources */}
-        <NavItem id="resources" label="Resources">
-          <div className="grid grid-cols-2 gap-6 min-w-[400px]">
-            <MegaCol title="LEARN" items={[
-              { icon: '🔒', title: 'Security Guides',    sub: 'Professional security methodologies' },
-              { icon: '📖', title: 'Documentation',    sub: 'Platform guides and API reference' },
-              { icon: '🔬', title: 'Research',          sub: 'Security research papers' },
-              { icon: '❓', title: 'FAQ',               sub: 'Frequently asked questions' },
-            ]} onClick={(item) => {
-              if (item === 'Security Guides') {
-                navigate('/security-guides')
-              } else {
-                handleMenuClick(item)
-              }
-            }} />
-            <MegaCol title="CONNECT" items={[
-              { icon: '💡', title: 'Security Insights', sub: 'Threat intelligence reports' },
-              { icon: '✍️', title: 'Blog',              sub: 'Cybersecurity articles' },
-              { icon: '🛟', title: 'Support',           sub: 'Technical support portal' },
-            ]} onClick={handleMenuClick} />
-          </div>
-        </NavItem>
+        {/* Request Service */}
+        <button 
+          onClick={() => navigate('/request-service')}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[16px] font-bold transition-all text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/20"
+        >
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          Request Service
+        </button>
 
         {/* About */}
         <NavItem id="about" label="About">

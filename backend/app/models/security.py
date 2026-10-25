@@ -119,6 +119,9 @@ class User(Base):
     is_active       = Column(Boolean, default=True)
     is_admin        = Column(Boolean, default=False)
     mfa_enabled     = Column(Boolean, default=False)
+    phone           = Column(String(64), nullable=True)
+    organization_name = Column(String(128), nullable=True)
+    organization_type = Column(String(64), nullable=True)
     created_at      = Column(DateTime(timezone=True), default=now_utc)
     last_login      = Column(DateTime(timezone=True), nullable=True)
 
@@ -141,11 +144,14 @@ class Asset(Base):
     __tablename__ = "assets"
 
     id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    organization_id    = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True)
+    organization_id    = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True, index=True)
+    user_id            = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     name               = Column(String(256), nullable=False)
     asset_type         = Column(String(32), nullable=False, default="OTHER")
     ip_address         = Column(String(64), nullable=False, index=True)
     hostname           = Column(String(256), nullable=True)
+    target_url         = Column(String(512), nullable=True)
+    service_type       = Column(String(64), nullable=True)
     description        = Column(Text, nullable=True)
     environment        = Column(String(32), nullable=False, default="LAB")
     status             = Column(String(32), nullable=False, default="PENDING", index=True)
@@ -153,6 +159,59 @@ class Asset(Base):
     sensor_id          = Column(String(128), nullable=True)
     created_at         = Column(DateTime(timezone=True), default=now_utc, index=True)
     updated_at         = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+
+
+class ServiceRequest(Base):
+    __tablename__ = "service_requests"
+
+    id                = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_number    = Column(String(32), nullable=False, unique=True, index=True)
+    user_id           = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    customer_id       = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    username          = Column(String(64), nullable=False, index=True)
+    customer_name     = Column(String(128), nullable=True)
+    customer_email    = Column(String(256), nullable=True)
+    organization_name = Column(String(128), nullable=True)
+    organization_type = Column(String(64), nullable=True)
+    service_type      = Column(String(64), nullable=False, index=True)
+    service_category  = Column(String(32), nullable=False, default="SCANNER")
+    asset_id          = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=True, index=True)
+    asset_name        = Column(String(256), nullable=True)
+    target_spec       = Column(String(512), nullable=True)
+    priority          = Column(String(16), nullable=False, default="Medium", index=True)
+    status            = Column(String(32), nullable=False, default="Pending", index=True)
+    request_type      = Column(String(64), nullable=False, default="New Deployment")
+    description       = Column(Text, nullable=True)
+    admin_notes       = Column(Text, nullable=True)
+    assigned_to       = Column(String(128), nullable=True)
+    created_at        = Column(DateTime(timezone=True), default=now_utc, index=True)
+    updated_at        = Column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+    resolved_at       = Column(DateTime(timezone=True), nullable=True)
+
+
+class RequestAsset(Base):
+    __tablename__ = "request_assets"
+
+    id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id  = Column(UUID(as_uuid=True), ForeignKey("service_requests.id", ondelete="CASCADE"), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    asset_type  = Column(String(64), nullable=False, default="WEBSITE")
+    asset_name  = Column(String(256), nullable=False)
+    asset_data  = Column(Text, nullable=True)
+    created_at  = Column(DateTime(timezone=True), default=now_utc, index=True)
+
+
+class RequestHistory(Base):
+    __tablename__ = "request_history"
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id      = Column(UUID(as_uuid=True), ForeignKey("service_requests.id", ondelete="CASCADE"), nullable=False, index=True)
+    customer_id     = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    previous_status = Column(String(32), nullable=True)
+    new_status      = Column(String(32), nullable=False)
+    changed_by      = Column(String(128), nullable=False)
+    notes           = Column(Text, nullable=True)
+    created_at      = Column(DateTime(timezone=True), default=now_utc, index=True)
 
 
 class SensorLifecycle(Base):

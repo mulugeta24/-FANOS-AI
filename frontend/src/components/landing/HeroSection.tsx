@@ -151,14 +151,12 @@ export default function HeroSection() {
               {/* Fallback visual shown when image not yet placed */}
               <div className="absolute inset-0 flex flex-col items-center justify-center"
                 style={{ background: 'linear-gradient(135deg,rgba(8,12,20,0.95),rgba(13,20,33,0.9))', zIndex: -1 }}>
-                <svg width="100" height="100" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L4 6.5V12c0 5 3.58 9.6 8 10.93C16.42 21.6 20 17 20 12V6.5L12 2Z"
-                    stroke="#22D3EE" strokeWidth="1" fill="rgba(34,211,238,0.08)"/>
-                  <path d="M9 12l2.5 2.5L15 9" stroke="#10B981" strokeWidth="1.5"
-                    strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <div className="text-[11px] font-bold mt-3" style={{ color: '#22D3EE' }}>FANOS AI</div>
-                <div className="text-[9px] mt-1" style={{ color: '#64748B' }}>Place hero-ai-cyber.jpg</div>
+                <img
+                  src="/images/fanos-shield.png"
+                  alt="FANOS AI"
+                  className="w-24 h-24 object-contain drop-shadow-[0_0_24px_rgba(16,185,129,0.4)]"
+                />
+                <div className="text-[13px] font-bold mt-3 text-white">FANOS <span className="text-emerald-400">AI</span></div>
               </div>
 
               {/* Scan line overlay */}

@@ -58,77 +58,85 @@ export default function WorkspaceSwitcher() {
       {/* Trigger */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-left"
-        style={{
-          background: 'rgba(255,255,255,0.04)',
-          border:     '1px solid rgba(255,255,255,0.08)',
-        }}
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 text-left bg-slate-900/60 hover:bg-slate-900/90 border border-white/[0.08] hover:border-white/[0.16] shadow-sm cursor-pointer group"
       >
-        <span style={{ color: current.color }} className="flex-shrink-0">
+        <div
+          className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
+          style={{ background: `${current.color}18`, color: current.color, border: `1px solid ${current.color}35` }}
+        >
           {current.icon}
-        </span>
+        </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-semibold text-fanos-text truncate leading-tight">
+          <div className="text-[11px] font-semibold text-slate-200 truncate leading-tight group-hover:text-white transition-colors">
             {current.label}
+          </div>
+          <div className="text-[9px] text-slate-500 truncate leading-none mt-0.5">
+            Active Workspace
           </div>
         </div>
         <ChevronDown
-          size={11}
-          className={`text-fanos-dim flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          size={12}
+          className={`text-slate-500 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180 text-sky-400' : ''}`}
         />
       </button>
 
       {/* Dropdown */}
       {open && (
         <div
-          className="absolute left-0 right-0 top-[calc(100%+6px)] rounded-xl overflow-hidden z-[300] shadow-2xl"
-          style={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)' }}
+          className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-2xl overflow-hidden z-[300] shadow-2xl bg-[#0c1424]/98 border border-white/[0.1] backdrop-blur-xl animate-fade-in p-1.5"
         >
-          <div className="px-3 py-2 border-b border-white/[0.05]">
-            <span className="text-[9px] font-bold tracking-[1.2px] uppercase text-fanos-dim">
-              Workspace
+          <div className="px-3 py-1.5 border-b border-white/[0.06] mb-1">
+            <span className="text-[9px] font-bold tracking-[1.2px] uppercase text-slate-400">
+              Switch Workspace
             </span>
           </div>
-          {OPTIONS.map(opt => {
-            const accessible = canAccess(opt.id)
-            const active = opt.id === workspace
-            return (
-              <button
-                key={opt.id}
-                disabled={!accessible}
-                onClick={() => { switchTo(opt.id); setOpen(false) }}
-                className="w-full flex items-start gap-2.5 px-3 py-2.5 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{
-                  background: active ? 'rgba(255,255,255,0.04)' : 'transparent',
-                }}
-                onMouseEnter={e => {
-                  if (accessible && !active)
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'
-                }}
-                onMouseLeave={e => {
-                  if (!active)
-                    (e.currentTarget as HTMLElement).style.background = 'transparent'
-                }}
-              >
-                <span style={{ color: opt.color }} className="flex-shrink-0 mt-0.5">
-                  {opt.icon}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-semibold text-fanos-text leading-tight">
-                    {opt.label}
+          <div className="space-y-0.5">
+            {OPTIONS.map(opt => {
+              const accessible = canAccess(opt.id)
+              const active = opt.id === workspace
+              return (
+                <button
+                  key={opt.id}
+                  disabled={!accessible}
+                  onClick={() => { if (accessible) { switchTo(opt.id); setOpen(false) } }}
+                  className={`w-full flex items-start gap-2.5 px-3 py-2 rounded-xl transition-all text-left ${
+                    !accessible ? 'opacity-40 cursor-not-allowed bg-black/20' : ''
+                  } ${
+                    active
+                      ? 'bg-white/[0.06] border border-white/[0.08]'
+                      : 'hover:bg-white/[0.04] border border-transparent'
+                  }`}
+                  title={!accessible ? 'Restricted: System Administrator access required' : ''}
+                >
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: `${opt.color}15`, color: opt.color, border: `1px solid ${opt.color}30` }}
+                  >
+                    {opt.icon}
                   </div>
-                  <div className="text-[9px] text-fanos-dim mt-0.5 truncate">
-                    {opt.sublabel}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-semibold text-white leading-tight flex items-center justify-between">
+                      <span>{opt.label}</span>
+                      {!accessible && (
+                        <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          Admin Only
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[9px] text-slate-400 mt-0.5 truncate">
+                      {opt.sublabel}
+                    </div>
                   </div>
-                </div>
-                {active && (
-                  <Check size={11} className="flex-shrink-0 mt-0.5" style={{ color: opt.color }} />
-                )}
-              </button>
-            )
-          })}
+                  {active && (
+                    <Check size={13} className="flex-shrink-0 mt-1" style={{ color: opt.color }} />
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
+
     </div>
   )
 }

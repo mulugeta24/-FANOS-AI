@@ -14,12 +14,18 @@ from app.api.v1 import (
     threat_detection,
     scanner,
     waf_events,
+    assets,
+    customer,
+    admin_requests,
 )
 from app.waf.api.v1 import api_router as waf_api_router
 
 api_router = APIRouter()
 
 api_router.include_router(auth.router)
+api_router.include_router(admin_requests.router)
+api_router.include_router(customer.router)
+api_router.include_router(assets.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(events.router)
 api_router.include_router(incidents.router)
@@ -34,3 +40,4 @@ api_router.include_router(suricata_events.router)
 api_router.include_router(sensors.router)
 api_router.include_router(waf_api_router, prefix="/waf")
 api_router.include_router(waf_events.router)
+

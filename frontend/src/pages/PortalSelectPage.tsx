@@ -8,6 +8,7 @@
  */
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import FanosLogo from '@/components/common/FanosLogo'
 import {
   ArrowUpRight,
   ShieldCheck,
@@ -41,18 +42,13 @@ export default function PortalSelectPage() {
       <aside className="w-[330px] border-r border-slate-300 bg-[#eef2f4] px-5 py-5 flex flex-col">
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-md border border-slate-300 bg-white flex items-center justify-center shadow-sm">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-label="FANOS logo">
-                <path d="M12 2L4 6.5V12c0 5 3.58 9.6 8 10.93C16.42 21.6 20 17 20 12V6.5L12 2Z" stroke="#0f8cc9" strokeWidth="1.3" strokeLinejoin="round" fill="rgba(15,140,201,0.08)" />
-                <path d="M9 12l2.5 2.5L15 9" stroke="#199ec6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <FanosLogo size={38} variant="icon" />
             <div className="leading-tight">
-              <div className="text-[15px] font-bold text-slate-800">
+              <div className="text-[13px] font-bold text-slate-600">
                 Center for
               </div>
-              <div className="text-[18px] font-bold text-slate-800">
-                FANOS Portal
+              <div className="text-[17px] font-black text-slate-900 flex items-center gap-1">
+                FANOS <span className="text-emerald-600">AI</span>
               </div>
             </div>
           </div>

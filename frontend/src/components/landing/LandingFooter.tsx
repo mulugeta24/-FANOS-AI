@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import FanosLogo from '@/components/common/FanosLogo'
 
 const LINKS = [
   { title: 'Platform',      items: ['AI Threat Detection','Network Security','Web Security','System Security','Incident Response'] },
@@ -15,19 +16,8 @@ export default function LandingFooter() {
       <div className="px-16 py-14 grid gap-16" style={{ gridTemplateColumns: '260px 1fr' }}>
         {/* Brand */}
         <div>
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#0d2a45,#0a3d62)', border: '1px solid rgba(34,211,238,0.3)' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L4 6.5V12c0 5 3.58 9.6 8 10.93C16.42 21.6 20 17 20 12V6.5L12 2Z"
-                  stroke="#22D3EE" strokeWidth="1.5" fill="rgba(34,211,238,0.08)"/>
-                <path d="M9 12l2.5 2.5L15 9" stroke="#10B981" strokeWidth="1.8"
-                  strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <div className="text-[15px] font-extrabold text-white">FANOS <span style={{ color: '#22D3EE' }}>AI</span></div>
-            </div>
+          <div className="mb-4">
+            <FanosLogo size={36} />
           </div>
           <p className="text-[12px] text-fanos-dim leading-relaxed mb-5 max-w-[210px]">
             AI-Powered Intrusion Detection, Prevention & Response System for enterprise security operations.

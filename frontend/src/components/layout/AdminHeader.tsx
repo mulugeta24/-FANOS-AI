@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Bell, Search, ChevronDown, Building2 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useWorkspace } from '@/context/WorkspaceContext'
+import { getAdminAllRequests } from '@/lib/api'
 
 const BREADCRUMBS: Record<string, string> = {
   '/admin-portal/overview':      'Overview',
@@ -27,7 +28,27 @@ export default function AdminHeader() {
   const navigate  = useNavigate()
   const { user }  = useWorkspace()
   const [userOpen, setUserOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState<number>(5)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const fetchPending = async () => {
+      try {
+        const reqs = await getAdminAllRequests()
+        const realPending = reqs.filter(r => (r.status || '').toLowerCase() === 'pending').length
+        let platformPending = 5
+        try {
+          const saved = localStorage.getItem('fanos_platform_approval_decisions')
+          const resolvedPlatform = saved ? Object.keys(JSON.parse(saved)).length : 0
+          platformPending = Math.max(0, 5 - resolvedPlatform)
+        } catch {}
+        setPendingCount(realPending + platformPending)
+      } catch {}
+    }
+    fetchPending()
+    const interval = setInterval(fetchPending, 8000)
+    return () => clearInterval(interval)
+  }, [])
 
   const pageLabel = BREADCRUMBS[location.pathname] ?? 'Admin Portal'
 
@@ -87,15 +108,15 @@ export default function AdminHeader() {
         {/* Pending approvals badge */}
         <button
           onClick={() => navigate('/admin-portal/approvals')}
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold cursor-pointer transition-all"
+          className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold cursor-pointer transition-all hover:brightness-110 active:scale-95"
           style={{
             background: 'rgba(245,158,11,0.08)',
             border:     '1px solid rgba(245,158,11,0.25)',
             color:      '#f59e0b',
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-fanos-amber" />
-          5 Pending
+          <span className="w-1.5 h-1.5 rounded-full bg-fanos-amber animate-pulse" />
+          {pendingCount} Pending
         </button>
 
         {/* Notifications */}

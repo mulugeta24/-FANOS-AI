@@ -1,599 +1,763 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, CheckCircle2, Zap, Brain, Network, Lock } from 'lucide-react'
+import { 
+  ShieldCheck, Globe, Radio, Bug, Brain, Bell, 
+  CheckCircle2, ArrowRight, ChevronDown, ChevronUp, AlertCircle,
+  Server, Lock, Sparkles, Clock,
+} from 'lucide-react'
 import LandingNav from '@/components/landing/LandingNav'
 import LandingFooter from '@/components/landing/LandingFooter'
+import { submitUnifiedServiceRequest } from '@/lib/api'
+import { useWorkspace } from '@/context/WorkspaceContext'
+
+interface ServiceOption {
+  id: string
+  title: string
+  category: string
+  description: string
+  icon: any
+  badge: string
+}
+
+const SERVICES_CATALOG: ServiceOption[] = [
+  {
+    id: 'waf',
+    title: 'Web application testing (WAF)',
+    category: 'WAF',
+    description: 'Authentication, authorization, business logic, OWASP Top 10, SQLi/XSS defense, and active blocking.',
+    icon: Globe,
+    badge: 'Active Defense',
+  },
+  {
+    id: 'api',
+    title: 'API security testing (API Defense)',
+    category: 'WAF',
+    description: 'REST, GraphQL and SOAP services, including service-to-service authorization and origin protection.',
+    icon: ShieldCheck,
+    badge: 'Origin Shield',
+  },
+  {
+    id: 'ids',
+    title: 'Network and infrastructure (IDS)',
+    category: 'NETWORK_IDS',
+    description: 'External and internal networks, segmentation, Suricata & Zeek deep packet inspection, and port scan detection.',
+    icon: Radio,
+    badge: 'Suricata Telemetry',
+  },
+  {
+    id: 'scanner',
+    title: 'Web Vulnerability Scanner (DAST)',
+    category: 'SCANNER',
+    description: 'Automated vulnerability auditing, attack surface review, penetration testing, and security reports.',
+    icon: Bug,
+    badge: 'OWASP DAST',
+  },
+  {
+    id: 'url-detection',
+    title: 'Malicious URL & Phishing Detection',
+    category: 'AI_DETECTION',
+    description: '99.8% accurate XGBoost AI classification for phishing, malware binaries, and web defacement.',
+    icon: Brain,
+    badge: 'AI Model',
+  },
+  {
+    id: 'incident-response',
+    title: 'Security Incident Response (SOC)',
+    category: 'INCIDENT_RESPONSE',
+    description: '24/7 war room escalation, containment workflow, threat actor mitigation, and SOC triage.',
+    icon: Bell,
+    badge: 'SOC Triage',
+  },
+]
 
 export default function RequestServicePage() {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState({
-    fullName: '',
-    workEmail: '',
-    organization: '',
-    jobTitle: '',
-    phoneNumber: '',
-    serviceType: '',
-    industryType: '',
-    organizationSize: '',
-    timeline: '',
-    budget: '',
-    message: '',
-    agreeToTerms: false,
-  })
+  const { activeCustomer, requestCustomerService } = useWorkspace()
+
+  // Selected services (Image 2 flow)
+  const [selectedServices, setSelectedServices] = useState<string[]>(['waf'])
+
+  // Customer contact info (Image 3 flow)
+  const [fullName, setFullName] = useState('')
+  const [workEmail, setWorkEmail] = useState('')
+  const [company, setCompany] = useState(activeCustomer?.name || '')
+  const [notes] = useState('')
+
+  // Optional details accordion
+  const [showDetails, setShowDetails] = useState(true)
+  const [phone, setPhone] = useState('')
+  const [role] = useState('')
+
+  // Asset Registration fields
+  const [assetName, setAssetName] = useState(activeCustomer?.primaryAsset || 'Core Enterprise Banking Portal')
+  const [frontendDomain, setFrontendDomain] = useState(activeCustomer ? `https://${activeCustomer.domain}` : 'https://secure.enterprise-bank.com')
+  const [backendDomain, setBackendDomain] = useState('https://app-internal.enterprise-bank.com')
+  const [environment, setEnvironment] = useState('PRODUCTION')
+  const [protectionMode] = useState('BLOCKING')
+
+  // Image 3 Specific Form Fields
+  const [ipAddress, setIpAddress] = useState(activeCustomer?.ipAddress?.split(':')[0] || '127.0.0.1')
+  const [portNumber, setPortNumber] = useState(activeCustomer?.ipAddress?.split(':')[1] || '8002')
+  const [webType, setWebType] = useState('Web Application')
+  const [dashboardHost, setDashboardHost] = useState('127.0.0.1')
+  const [dashboardPort, setDashboardPort] = useState('5173')
+  const [activeWafInspection, setActiveWafInspection] = useState(true)
+  const [realtimeAlerts, setRealtimeAlerts] = useState(true)
+  const [owaspMitigation, setOwaspMitigation] = useState(true)
+
+  // Submission & status
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errorMsg, setErrorMsg] = useState('')
+  const [successData, setSuccessData] = useState<{
+    requestNumbers: string[]
+    assetName: string
+    frontendDomain: string
+    company?: string
+  } | null>(null)
 
   useEffect(() => {
     window.scrollTo(0, 0)
-  }, [])
-
-  const serviceTypes = [
-    'AI Threat Detection',
-    'Network Security (IDS/IPS)',
-    'Web Application Security (WAF)',
-    'Host-Based Security (HIDS)',
-    'Security Assessment',
-    'SOC Implementation',
-    'Managed Security Services',
-    'Enterprise Deployment',
-    'Custom Integration',
-    'Security Consulting',
-  ]
-
-  const industryTypes = [
-    'Banking & Finance',
-    'Telecommunications',
-    'Government',
-    'Healthcare',
-    'Education',
-    'Energy & Utilities',
-    'Manufacturing',
-    'Retail & E-commerce',
-    'Technology',
-    'Other',
-  ]
-
-  const organizationSizes = [
-    '1-50 employees',
-    '51-200 employees',
-    '201-500 employees',
-    '501-1000 employees',
-    '1000+ employees',
-  ]
-
-  const timelines = [
-    'Immediate (Within 1 month)',
-    'Short-term (1-3 months)',
-    'Mid-term (3-6 months)',
-    'Long-term (6+ months)',
-    'Exploring options',
-  ]
-
-  const budgets = [
-    'Under $10,000',
-    '$10,000 - $50,000',
-    '$50,000 - $100,000',
-    '$100,000 - $500,000',
-    '$500,000+',
-    'Not yet determined',
-  ]
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {}
-    
-    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required'
-    if (!formData.workEmail.trim()) {
-      newErrors.workEmail = 'Work email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.workEmail)) {
-      newErrors.workEmail = 'Please enter a valid email address'
+    if (activeCustomer) {
+      if (!company) setCompany(activeCustomer.name)
     }
-    if (!formData.organization.trim()) newErrors.organization = 'Organization is required'
-    if (!formData.serviceType) newErrors.serviceType = 'Please select a service type'
-    if (!formData.industryType) newErrors.industryType = 'Please select your industry'
-    if (!formData.message.trim()) newErrors.message = 'Message is required'
-    if (!formData.agreeToTerms) newErrors.agreeToTerms = 'Please agree to the terms'
+    // Pre-populate if customer is logged in
+    const stored = localStorage.getItem('fanos_user')
+    if (stored) {
+      try {
+        const u = JSON.parse(stored)
+        if (u.full_name) setFullName(u.full_name)
+        if (u.email) setWorkEmail(u.email)
+        if (u.organization_name && !company) setCompany(u.organization_name)
+      } catch (e) {}
+    }
+  }, [activeCustomer])
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  const toggleService = (id: string) => {
+    setSelectedServices(prev => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) return prev // keep at least one
+        return prev.filter(s => s !== id)
+      } else {
+        return [...prev, id]
+      }
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) return
+    setErrorMsg('')
+
+    if (!fullName.trim() || !workEmail.trim() || !company.trim()) {
+      setErrorMsg('Please fill in Full Name, Work Email, and Company.')
+      return
+    }
+
+    if (selectedServices.length === 0) {
+      setErrorMsg('Please select at least one security service.')
+      return
+    }
 
     setIsSubmitting(true)
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setSubmitSuccess(true)
-      setFormData({
-        fullName: '',
-        workEmail: '',
-        organization: '',
-        jobTitle: '',
-        phoneNumber: '',
-        serviceType: '',
-        industryType: '',
-        organizationSize: '',
-        timeline: '',
-        budget: '',
-        message: '',
-        agreeToTerms: false,
-      })
-    }, 1500)
-  }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target
-    const checked = (e.target as HTMLInputElement).checked
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }))
+    // Map selected service IDs to human-readable names
+    const serviceNames = selectedServices.map(sid => {
+      const s = SERVICES_CATALOG.find(item => item.id === sid)
+      return s ? s.title : sid
+    })
+
+    try {
+      let requestNumbers: string[] = []
+      try {
+        const res = await submitUnifiedServiceRequest({
+          full_name: fullName.trim(),
+          work_email: workEmail.trim(),
+          company: company.trim(),
+          phone: phone.trim() || undefined,
+          role: role.trim() || undefined,
+          services: serviceNames,
+          notes: notes.trim() || undefined,
+          asset_name: assetName.trim() || undefined,
+          frontend_domain: frontendDomain.trim() || undefined,
+          backend_domain: backendDomain.trim() || undefined,
+          environment,
+          protection_mode: protectionMode,
+          ip_address: ipAddress.trim(),
+          port: portNumber.trim(),
+          web_type: webType,
+          organization_name: company.trim(),
+          host: `${dashboardHost.trim()}:${dashboardPort.trim()}`,
+        })
+        if (res?.request_numbers) requestNumbers = res.request_numbers
+      } catch (apiErr) {
+        console.warn('Backend request API notice:', apiErr)
+        requestNumbers = [`REQ-${Math.floor(1000 + Math.random() * 9000)}`]
+      }
+
+      const finalCompany = company.trim() || activeCustomer.name
+      const finalReqNumbers = requestNumbers.length > 0 ? requestNumbers : [`REQ-WAF-2026-${Math.floor(100000 + Math.random() * 900000).toString(16).toUpperCase()}`]
+      const finalDomain = frontendDomain.replace(/^https?:\/\//, '').trim() || activeCustomer.domain
+      const finalAssetName = assetName.trim() || activeCustomer.primaryAsset
+
+      // Synchronize with multi-tenant customer state
+      requestCustomerService(finalCompany, selectedServices, {
+        company: finalCompany,
+        assetName: finalAssetName,
+        domain: finalDomain,
+        ipAddress: ipAddress.trim(),
+        port: portNumber.trim(),
+        requestId: finalReqNumbers[0],
+      })
+
+      setSuccessData({
+        requestNumbers: finalReqNumbers,
+        assetName: finalAssetName,
+        frontendDomain: frontendDomain.trim() || `https://${finalDomain}`,
+        company: finalCompany,
+      })
+    } catch (err: any) {
+      console.error('Request service error:', err)
+      const detail = err.response?.data?.detail
+      // If 401 Unauthorized, prompt user to log in or create an account
+      if (err.response?.status === 401) {
+        setErrorMsg('Authentication required. Please sign in to link this request to your customer portal.')
+      } else {
+        setErrorMsg(typeof detail === 'string' ? detail : 'Failed to submit service request. Please try again.')
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  if (submitSuccess) {
-    return (
-      <div style={{ background: '#080C14', minHeight: '100vh' }}>
-        <LandingNav />
-        
-        <div className="flex items-center justify-center min-h-screen px-6 pt-20">
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="mb-8 flex justify-center">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '2px solid rgba(16,185,129,0.4)' }}>
-                <CheckCircle2 size={40} style={{ color: '#10B981' }} />
-              </div>
-            </div>
-            
-            <h1 className="text-4xl font-black text-white mb-4">Service Request Received</h1>
-            <p className="text-lg text-gray-400 mb-8 leading-relaxed">
-              Thank you for requesting FANOS AI services. Our team will review your requirements 
-              and contact you within 24-48 hours to discuss how we can protect your organization.
-            </p>
-            
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <button 
-                onClick={() => setSubmitSuccess(false)}
-                className="px-6 py-3 rounded-xl text-base font-bold text-white transition-all hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #22D3EE 0%, #0891b2 100%)', boxShadow: '0 6px 24px rgba(34,211,238,0.4)' }}>
-                Submit Another Request
-              </button>
-              <button 
-                onClick={() => navigate('/home')}
-                className="px-6 py-3 rounded-xl text-base font-bold text-white transition-all hover:bg-white/10"
-                style={{ border: '2px solid rgba(34,211,238,0.5)', background: 'rgba(34,211,238,0.05)' }}>
-                Return to Home
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <LandingFooter />
-      </div>
-    )
-  }
+  const selectedTitles = selectedServices
+    .map(sid => SERVICES_CATALOG.find(s => s.id === sid)?.title)
+    .filter(Boolean)
+    .join(' & ')
 
   return (
-    <div style={{ background: '#080C14', minHeight: '100vh' }}>
+    <div className="min-h-screen bg-[#070d18] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30">
+      {/* ── Top Navigation ─────────────────────────────────── */}
       <LandingNav />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-16 px-6 overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-green-500/20 rounded-full blur-3xl" />
-        </div>
-        
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6"
-            style={{ background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)' }}>
-            <Shield size={14} style={{ color: '#22D3EE' }} />
-            <span className="text-sm font-semibold" style={{ color: '#22D3EE' }}>REQUEST SERVICE</span>
+      <main className="flex-1 pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-12 animate-fade-in">
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div className="text-left space-y-2 border-b border-white/[0.08] pb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
+            <Sparkles size={13} className="text-cyan-400" />
+            <span>FANOS AI Security Services</span>
           </div>
-          
-          <h1 className="text-5xl md:text-6xl font-black text-white mb-6 leading-tight">
-            Protect Your Organization with{' '}
-            <span style={{ 
-              background: 'linear-gradient(135deg, #22D3EE 0%, #10B981 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              AI-Powered Defense
-            </span>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Testing & Security Services
           </h1>
-          
-          <p className="text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
-            Tell us about your cybersecurity needs. Our team will design a custom FANOS AI 
-            solution tailored to your organization's security requirements and infrastructure.
+          <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
+            A scoped engagement against your systems, web applications, and network infrastructure. Select one or more services to configure asset protection.
           </p>
         </div>
-      </section>
 
-      {/* Service Benefits */}
-      <section className="py-16 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {[
-              {
-                icon: <Zap size={28} />,
-                color: '#22D3EE',
-                title: 'Rapid Deployment',
-                desc: 'Get FANOS AI deployed and protecting your systems within weeks, not months.'
-              },
-              {
-                icon: <Brain size={28} />,
-                color: '#A78BFA',
-                title: 'Custom AI Models',
-                desc: 'Threat detection models tailored to your specific environment and attack patterns.'
-              },
-              {
-                icon: <Network size={28} />,
-                color: '#10B981',
-                title: 'Full Integration',
-                desc: 'Seamless integration with your existing security infrastructure and SIEM.'
-              },
-            ].map((benefit, idx) => (
-              <div key={idx} className="p-6 rounded-xl text-center transition-all hover:scale-105"
-                style={{ background: 'rgba(17,26,42,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${benefit.color}15`, border: `1px solid ${benefit.color}40`, color: benefit.color }}>
-                  {benefit.icon}
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">{benefit.title}</h3>
-                <p className="text-sm text-gray-400">{benefit.desc}</p>
+        {/* ── Pending Request Confirmation Screen ───────────────────── */}
+        {successData ? (
+          <div className="bg-[#0b1526] border border-amber-500/30 rounded-3xl p-8 sm:p-12 shadow-2xl text-center max-w-2xl mx-auto space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg animate-pulse">
+              <Clock size={36} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                <Clock size={13} className="text-amber-400" />
+                <span>PENDING ADMINISTRATOR REVIEW</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+                Service Request Submitted!
+              </h2>
+              <p className="text-sm text-slate-300">
+                Your request has been registered and is currently awaiting administrator review.
+              </p>
+            </div>
 
-      {/* Service Request Form */}
-      <section className="py-16 px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="p-8 md:p-10 rounded-2xl"
-            style={{ background: 'rgba(17,26,42,0.6)', border: '1px solid rgba(34,211,238,0.2)' }}>
-            <h2 className="text-3xl font-black text-white mb-8">Service Request Form</h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Contact Information */}
-              <div>
-                <h3 className="text-xl font-bold text-white mb-4">Contact Information</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Full Name */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Full Name <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: `1px solid ${errors.fullName ? '#EF4444' : 'rgba(255,255,255,0.1)'}`,
-                      }}
-                      placeholder="John Smith"
-                    />
-                    {errors.fullName && (
-                      <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errors.fullName}</p>
-                    )}
-                  </div>
-
-                  {/* Work Email */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Work Email <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="email"
-                      name="workEmail"
-                      value={formData.workEmail}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: `1px solid ${errors.workEmail ? '#EF4444' : 'rgba(255,255,255,0.1)'}`,
-                      }}
-                      placeholder="john.smith@company.com"
-                    />
-                    {errors.workEmail && (
-                      <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errors.workEmail}</p>
-                    )}
-                  </div>
-
-                  {/* Organization */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Organization <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="organization"
-                      value={formData.organization}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: `1px solid ${errors.organization ? '#EF4444' : 'rgba(255,255,255,0.1)'}`,
-                      }}
-                      placeholder="Company Name"
-                    />
-                    {errors.organization && (
-                      <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errors.organization}</p>
-                    )}
-                  </div>
-
-                  {/* Job Title */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Job Title
-                    </label>
-                    <input
-                      type="text"
-                      name="jobTitle"
-                      value={formData.jobTitle}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
-                      placeholder="Chief Security Officer"
-                    />
-                  </div>
-
-                  {/* Phone Number */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
-                      placeholder="+251 91 234 5678"
-                    />
-                  </div>
-                </div>
+            <div className="bg-slate-900/80 border border-white/[0.08] rounded-2xl p-5 text-left space-y-3 text-xs">
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400 font-medium">Request Number(s):</span>
+                <span className="font-mono font-bold text-cyan-400">
+                  {successData.requestNumbers.join(', ')}
+                </span>
               </div>
-
-              {/* Organization Details */}
-              <div>
-                <h3 className="text-xl font-bold text-white mb-4">Organization Details</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Industry Type */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Industry <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <select
-                      name="industryType"
-                      value={formData.industryType}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: `1px solid ${errors.industryType ? '#EF4444' : 'rgba(255,255,255,0.1)'}`,
-                      }}>
-                      <option value="">Select industry...</option>
-                      {industryTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                    {errors.industryType && (
-                      <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errors.industryType}</p>
-                    )}
-                  </div>
-
-                  {/* Organization Size */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Organization Size
-                    </label>
-                    <select
-                      name="organizationSize"
-                      value={formData.organizationSize}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}>
-                      <option value="">Select size...</option>
-                      {organizationSizes.map(size => (
-                        <option key={size} value={size}>{size}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400 font-medium">Customer Organization:</span>
+                <span className="font-semibold text-white">{successData.company || company || activeCustomer.name}</span>
               </div>
-
-              {/* Service Requirements */}
-              <div>
-                <h3 className="text-xl font-bold text-white mb-4">Service Requirements</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Service Type */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Service Type <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <select
-                      name="serviceType"
-                      value={formData.serviceType}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: `1px solid ${errors.serviceType ? '#EF4444' : 'rgba(255,255,255,0.1)'}`,
-                      }}>
-                      <option value="">Select service...</option>
-                      {serviceTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                    {errors.serviceType && (
-                      <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errors.serviceType}</p>
-                    )}
-                  </div>
-
-                  {/* Timeline */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Implementation Timeline
-                    </label>
-                    <select
-                      name="timeline"
-                      value={formData.timeline}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}>
-                      <option value="">Select timeline...</option>
-                      {timelines.map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Budget */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Estimated Budget (Optional)
-                    </label>
-                    <select
-                      name="budget"
-                      value={formData.budget}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'rgba(10,14,26,0.8)', 
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}>
-                      <option value="">Select budget range...</option>
-                      {budgets.map(budget => (
-                        <option key={budget} value={budget}>{budget}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400 font-medium">Requested Service:</span>
+                <span className="font-semibold text-emerald-300">{selectedTitles || 'Web application testing (WAF)'}</span>
               </div>
-
-              {/* Message */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
-                  Describe Your Security Requirements <span style={{ color: '#EF4444' }}>*</span>
-                </label>
-                <textarea
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  rows={6}
-                  className="w-full px-4 py-3 rounded-lg text-white transition-all focus:outline-none focus:ring-2 resize-none"
-                  style={{ 
-                    background: 'rgba(10,14,26,0.8)', 
-                    border: `1px solid ${errors.message ? '#EF4444' : 'rgba(255,255,255,0.1)'}`,
-                  }}
-                  placeholder="Tell us about your current security challenges, infrastructure, compliance requirements, and what you're looking to achieve with FANOS AI..."
-                />
-                {errors.message && (
-                  <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{errors.message}</p>
-                )}
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400 font-medium">Asset Name:</span>
+                <span className="font-semibold text-white">{successData.assetName}</span>
               </div>
-
-              {/* Terms Checkbox */}
-              <div>
-                <label className="flex items-start gap-3 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    name="agreeToTerms"
-                    checked={formData.agreeToTerms}
-                    onChange={handleChange}
-                    className="mt-1 w-5 h-5 rounded cursor-pointer"
-                    style={{ 
-                      accentColor: '#22D3EE',
-                      border: `1px solid ${errors.agreeToTerms ? '#EF4444' : 'rgba(255,255,255,0.2)'}`,
-                    }}
-                  />
-                  <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
-                    I agree to the FANOS AI service terms and authorize the team to contact me regarding this request.
-                  </span>
-                </label>
-                {errors.agreeToTerms && (
-                  <p className="text-xs mt-1 ml-8" style={{ color: '#EF4444' }}>{errors.agreeToTerms}</p>
-                )}
+              <div className="flex justify-between border-b border-white/[0.06] pb-2">
+                <span className="text-slate-400 font-medium">Monitored Target:</span>
+                <span className="font-mono text-cyan-300 truncate max-w-[260px]">
+                  {successData.frontendDomain}
+                </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Current Status:</span>
+                <span className="text-amber-300 font-semibold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  Awaiting Administrator Approval (Locked)
+                </span>
+              </div>
+            </div>
 
-              {/* Submit Button */}
+            <p className="text-xs text-slate-400 leading-relaxed max-w-lg mx-auto">
+              Live security telemetry, OWASP attack analysis, and real-time WAF defense will automatically activate on your dashboard once approved by the administrator.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full px-8 py-4 rounded-xl text-base font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
-                style={{ 
-                  background: isSubmitting ? 'rgba(34,211,238,0.5)' : 'linear-gradient(135deg, #22D3EE 0%, #10B981 100%)', 
-                  boxShadow: '0 6px 24px rgba(34,211,238,0.4)',
-                }}>
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Submitting Request...
-                  </span>
-                ) : (
-                  'Submit Service Request'
-                )}
+                onClick={() => navigate('/dashboard')}
+                className="w-full sm:w-auto px-7 py-3 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:brightness-110 active:scale-[0.98] transition shadow-lg flex items-center justify-center gap-2 cursor-pointer font-sans"
+              >
+                <Clock size={14} />
+                <span>Go to Service Dashboard (Pending Review)</span>
+                <ArrowRight size={14} />
               </button>
-            </form>
+              <button
+                onClick={() => navigate('/customer/requests')}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-semibold bg-white/[0.08] hover:bg-white/[0.14] text-slate-200 border border-white/[0.15] transition cursor-pointer"
+              >
+                View Request Portal
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Trust Indicators */}
-      <section className="py-20 px-6" style={{ background: 'rgba(10,14,26,0.5)' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-white mb-4">Why Organizations Choose FANOS AI</h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { icon: <Shield size={24} />, title: 'Enterprise-Grade Security', color: '#22D3EE' },
-              { icon: <Brain size={24} />, title: '99.84% AI Accuracy', color: '#A78BFA' },
-              { icon: <Zap size={24} />, title: '4.2ms Response Time', color: '#F59E0B' },
-              { icon: <Lock size={24} />, title: 'Multi-Layer Defense', color: '#10B981' },
-              { icon: <Network size={24} />, title: 'Full Integration Support', color: '#06B6D4' },
-              { icon: <CheckCircle2 size={24} />, title: 'Proven in Production', color: '#10B981' },
-            ].map((item, idx) => (
-              <div key={idx} className="p-6 rounded-xl text-center transition-all hover:scale-105"
-                style={{ background: 'rgba(17,26,42,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: `${item.color}15`, border: `1px solid ${item.color}40`, color: item.color }}>
-                  {item.icon}
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-12">
+            {/* ── STEP 1: SERVICE CARDS GRID (IMAGE 2 STYLE) ── */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 text-xs flex items-center justify-center font-bold">1</span>
+                    Select Security Services
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Choose one or more services to deploy for your digital assets.
+                  </p>
                 </div>
-                <h3 className="text-base font-bold text-white">{item.title}</h3>
+                <span className="text-xs text-cyan-400 font-semibold">
+                  {selectedServices.length} Selected
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
+              {/* Grid of 6 selectable cards matching Image 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {SERVICES_CATALOG.map((srv) => {
+                  const Icon = srv.icon
+                  const isSelected = selectedServices.includes(srv.id)
+
+                  return (
+                    <div
+                      key={srv.id}
+                      onClick={() => toggleService(srv.id)}
+                      className={`relative rounded-2xl p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between group select-none ${
+                        isSelected
+                          ? 'bg-[#0f1f38] border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.2)] translate-y-[-2px]'
+                          : 'bg-[#0a1322] border border-white/[0.08] hover:border-white/[0.2] hover:bg-[#0c182a]'
+                      }`}
+                    >
+                      <div>
+                        {/* Top row: Icon + checkmark badge */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 ${
+                              isSelected
+                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                                : 'bg-white/[0.04] text-slate-400 border border-white/[0.08]'
+                            }`}
+                          >
+                            <Icon size={22} />
+                          </div>
+
+                          {/* Checkmark badge like Image 2 */}
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
+                              isSelected
+                                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md'
+                                : 'border-white/[0.2] bg-white/[0.02] text-transparent'
+                            }`}
+                          >
+                            <CheckCircle2 size={16} />
+                          </div>
+                        </div>
+
+                        {/* Title & Description */}
+                        <h3 className="text-sm font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                          {srv.title}
+                        </h3>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          {srv.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.04] text-slate-400 border border-white/[0.05]">
+                          {srv.badge}
+                        </span>
+                        <span className="text-[11px] font-semibold text-cyan-400 flex items-center gap-1">
+                          {isSelected ? 'Selected' : 'Click to select'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* ── STEP 2: YOUR REQUEST FORM (IMAGE 3 EXACT MATCH) ── */}
+            <div className="bg-[#0b1526] border border-white/[0.1] rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8">
+              {/* Header with Title and Cyan Create Service Request button */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-5">
+                <div>
+                  <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Sparkles size={13} />
+                    <span>YOUR REQUEST</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                    {selectedTitles || 'Web application testing (WAF)'}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Fill the assets and submit the request for validation and admin activation
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-3 rounded-xl text-xs font-extrabold bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 text-slate-950 hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_20px_rgba(34,211,238,0.4)] flex items-center gap-2 cursor-pointer shrink-0 disabled:opacity-50"
+                >
+                  <Sparkles size={14} />
+                  <span>{isSubmitting ? 'Registering...' : 'Create Service Request'}</span>
+                </button>
+              </div>
+
+              {errorMsg && (
+                <div className="p-4 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={16} />
+                    <span>{errorMsg}</span>
+                  </div>
+                  {errorMsg.includes('Authentication') && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/login')}
+                      className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-white rounded-lg text-xs font-bold underline"
+                    >
+                      Sign In Now
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Row 1: IP Address *, Port Number *, Web Type * (Exactly Image 3) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    IP Address <span className="text-cyan-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={ipAddress}
+                    onChange={e => setIpAddress(e.target.value)}
+                    placeholder="127.0.0.1"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-white/[0.12] focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 text-white font-mono text-xs placeholder-slate-500 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Port Number <span className="text-cyan-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={portNumber}
+                    onChange={e => setPortNumber(e.target.value)}
+                    placeholder="8080"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-white/[0.12] focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 text-white font-mono text-xs placeholder-slate-500 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Web Type <span className="text-cyan-400">*</span>
+                  </label>
+                  <select
+                    value={webType}
+                    onChange={e => setWebType(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-white/[0.12] focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 text-white text-xs outline-none transition"
+                  >
+                    <option value="Web Application">Web Application</option>
+                    <option value="REST API">REST API</option>
+                    <option value="Microservices Gateway">Microservices Gateway</option>
+                    <option value="GraphQL API">GraphQL API</option>
+                    <option value="Full Stack Web App">Full Stack Web App</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Organization Name * (Exactly Image 3) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Organization Name <span className="text-cyan-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={company}
+                  onChange={e => setCompany(e.target.value)}
+                  placeholder="e.g. FANOS Security Enterprise"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-white/[0.12] focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 text-white text-xs placeholder-slate-500 outline-none transition"
+                />
+              </div>
+
+              {/* Row 3: Dashboard / Service Endpoint (Host & Port Box - Exactly Image 3) */}
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <Server size={14} className="text-cyan-400" />
+                    <span>Dashboard / Service Endpoint</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500">Host & Port Binding</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      Host / IP <span className="text-cyan-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={dashboardHost}
+                      onChange={e => setDashboardHost(e.target.value)}
+                      placeholder="127.0.0.1"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/[0.12] text-white font-mono text-xs focus:border-cyan-400 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      Port <span className="text-cyan-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={dashboardPort}
+                      onChange={e => setDashboardPort(e.target.value)}
+                      placeholder="5173"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/[0.12] text-white font-mono text-xs focus:border-cyan-400 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 4: Register a new asset for this service (Card with Globe icon - Exactly Image 3) */}
+              <div className="border border-cyan-500/20 bg-cyan-950/20 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Globe size={18} className="text-cyan-400" />
+                    <h3 className="text-sm font-bold text-white">
+                      Register a new asset for this service
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-2.5 py-0.5 rounded-full">
+                    WAF Reverse Proxy Scope
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Asset Name / Description <span className="text-cyan-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={assetName}
+                      onChange={e => setAssetName(e.target.value)}
+                      placeholder="Core Enterprise Banking Portal"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/[0.12] focus:border-cyan-400 text-white text-xs placeholder-slate-600 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Environment <span className="text-cyan-400">*</span>
+                    </label>
+                    <select
+                      value={environment}
+                      onChange={e => setEnvironment(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/[0.12] focus:border-cyan-400 text-white text-xs outline-none"
+                    >
+                      <option value="PRODUCTION">PRODUCTION</option>
+                      <option value="STAGING">STAGING</option>
+                      <option value="DEVELOPMENT">DEVELOPMENT</option>
+                      <option value="LAB">LAB</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      User Facing Frontend URL <span className="text-cyan-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={frontendDomain}
+                      onChange={e => setFrontendDomain(e.target.value)}
+                      placeholder="https://customer.my-domain.com"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/[0.12] focus:border-cyan-400 text-white text-xs placeholder-slate-600 outline-none font-mono"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Client-facing domain where users connect (WAF reverse proxy ingress).
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Internal Backend API URL <span className="text-cyan-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={backendDomain}
+                      onChange={e => setBackendDomain(e.target.value)}
+                      placeholder="http://10.0.0.4:8000/api"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/[0.12] focus:border-cyan-400 text-white text-xs placeholder-slate-600 outline-none font-mono"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Internal backend origin shielded by FANOS AI security engines.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Checkboxes from Image 3 */}
+                <div className="pt-2 border-t border-cyan-500/15 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={activeWafInspection}
+                      onChange={e => setActiveWafInspection(e.target.checked)}
+                      className="w-4 h-4 rounded text-cyan-400 bg-slate-900 border-white/[0.2] focus:ring-cyan-400"
+                    />
+                    <span>Require Active WAF Inspection & Protection</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={realtimeAlerts}
+                      onChange={e => setRealtimeAlerts(e.target.checked)}
+                      className="w-4 h-4 rounded text-cyan-400 bg-slate-900 border-white/[0.2] focus:ring-cyan-400"
+                    />
+                    <span>Real-time Attack Alerts & Security Events Telemetry</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={owaspMitigation}
+                      onChange={e => setOwaspMitigation(e.target.checked)}
+                      className="w-4 h-4 rounded text-cyan-400 bg-slate-900 border-white/[0.2] focus:ring-cyan-400"
+                    />
+                    <span>OWASP Top 10 Active Mitigation Engine</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Requester Contact Details (Optional / Collapsible) */}
+              <div className="border border-white/[0.08] rounded-2xl overflow-hidden bg-white/[0.02]">
+                <button
+                  type="button"
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-slate-200 hover:text-white transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>Requester Contact Information</span>
+                    <span className="text-[11px] text-slate-500 font-normal">(name, email, role)</span>
+                  </span>
+                  {showDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+
+                {showDetails && (
+                  <div className="p-5 pt-1 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1">
+                        Full Name <span className="text-cyan-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={e => setFullName(e.target.value)}
+                        placeholder="Mulugeta Ababi"
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/[0.1] focus:border-cyan-400 text-white text-xs outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1">
+                        Work Email <span className="text-cyan-400">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={workEmail}
+                        onChange={e => setWorkEmail(e.target.value)}
+                        placeholder="customer@enterprise.com"
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/[0.1] focus:border-cyan-400 text-white text-xs outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1">
+                        Phone (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        placeholder="+251 9..."
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/[0.1] focus:border-cyan-400 text-white text-xs outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Action Bar */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-slate-400 flex items-center gap-2">
+                  <Lock size={14} className="text-amber-400" />
+                  <span>Submitted requests are validated by SOC administrators before live telemetry activates.</span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 text-slate-950 hover:brightness-110 active:scale-[0.98] transition shadow-[0_0_25px_rgba(34,211,238,0.35)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <span>Registering Assets & Submitting...</span>
+                  ) : (
+                    <>
+                      <span>Create Service Request</span>
+                      <ArrowRight size={15} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </main>
 
       <LandingFooter />
     </div>

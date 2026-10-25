@@ -40,6 +40,7 @@ interface WAFDomainSelectorProps {
   setIsExternalModalOpen?: (open: boolean) => void;
   externalManageDomain?: Domain | null;
   setExternalManageDomain?: (domain: Domain | null) => void;
+  hideProtectButton?: boolean;
 }
 
 export const WAFDomainSelector: React.FC<WAFDomainSelectorProps> = ({
@@ -54,6 +55,7 @@ export const WAFDomainSelector: React.FC<WAFDomainSelectorProps> = ({
   setIsExternalModalOpen,
   externalManageDomain,
   setExternalManageDomain,
+  hideProtectButton = false,
 }) => {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -636,15 +638,17 @@ export const WAFDomainSelector: React.FC<WAFDomainSelectorProps> = ({
         </div>
       )}
 
-      {/* Quick Add Website Button */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer shadow-sm hover:shadow-cyan-500/10"
-        title="Register and protect a Production or Demo/Lab website"
-      >
-        <Plus size={12} className="text-cyan-400" />
-        <span>Protect Website</span>
-      </button>
+      {/* Quick Add Website Button (omitted in customer portal) */}
+      {!hideProtectButton && (
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer shadow-sm hover:shadow-cyan-500/10"
+          title="Register and protect a Production or Demo/Lab website"
+        >
+          <Plus size={12} className="text-cyan-400" />
+          <span>Protect Website</span>
+        </button>
+      )}
 
       {/* Refresh domains button */}
       <button

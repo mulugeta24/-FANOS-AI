@@ -1,16 +1,24 @@
-/**
- * SecOpsLayout — shell for the Security Operations workspace.
- * Wraps all /secops/* routes.
- */
-import { Outlet } from 'react-router-dom'
+import { Outlet, Navigate } from 'react-router-dom'
 import SecOpsSidebar from './SecOpsSidebar'
 import SecOpsHeader  from './SecOpsHeader'
+import { useWorkspace } from '@/context/WorkspaceContext'
 
 export default function SecOpsLayout() {
+  const { user } = useWorkspace()
+
+  // Strict role check: Customers cannot access Security Operations
+  if (user && user.role === 'customer') {
+    return <Navigate to="/customer/dashboard" replace />
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden bg-fanos-bg">
+    <div className="flex h-screen overflow-hidden bg-[#060911] text-fanos-text relative cyber-grid-bg">
+      {/* Ambient background glows */}
+      <div className="pointer-events-none absolute -top-40 left-1/4 w-[600px] h-[600px] rounded-full bg-sky-500/[0.04] blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-40 right-1/4 w-[600px] h-[600px] rounded-full bg-purple-500/[0.03] blur-[120px]" />
+
       <SecOpsSidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden relative z-10">
         <SecOpsHeader />
         <main className="flex-1 overflow-y-auto">
           <Outlet />
@@ -19,3 +27,4 @@ export default function SecOpsLayout() {
     </div>
   )
 }
+

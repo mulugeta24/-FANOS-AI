@@ -49,6 +49,7 @@ interface WAFOverviewTabProps {
   onDomainModeChange?: (domainId: string, newMode: 'monitor' | 'block' | 'hybrid') => void;
   onGlobalModeChange?: (newMode: 'monitor' | 'block' | 'hybrid') => void;
   isLiveConnected?: boolean;
+  hideProtectButton?: boolean;
 }
 
 export const WAFOverviewTab: React.FC<WAFOverviewTabProps> = ({
@@ -63,6 +64,7 @@ export const WAFOverviewTab: React.FC<WAFOverviewTabProps> = ({
   onDomainModeChange,
   onGlobalModeChange,
   isLiveConnected = true,
+  hideProtectButton = false,
 }) => {
   // Quick Simulator State for live proof of work
   const [simPayload, setSimPayload] = useState<string>("admin' OR '1'='1' --");
@@ -304,13 +306,15 @@ export const WAFOverviewTab: React.FC<WAFOverviewTabProps> = ({
               </button>
             </div>
 
-            <button
-              onClick={() => onOpenProtectModal?.()}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4 text-slate-950" />
-              <span>Protect Website</span>
-            </button>
+            {!hideProtectButton && onOpenProtectModal && (
+              <button
+                onClick={() => onOpenProtectModal?.()}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4 text-slate-950" />
+                <span>Protect Website</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -6,46 +6,61 @@
  *   analyst  → /secops/overview
  *   customer → /dashboard
  */
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Eye, EyeOff, AlertCircle, Shield, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { Eye, EyeOff, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
 import { loginApi } from '@/lib/api'
+import FanosLogo from '@/components/common/FanosLogo'
 
 // ── Role → redirect destination ───────────────────────────────
 const ROLE_HOME: Record<string, string> = {
   admin:    '/admin-portal/overview',
   analyst:  '/secops/overview',
-  customer: '/dashboard',
+  customer: '/customer/dashboard',
 }
 
 // ── Demo credential cards (submits against backend /auth/login) ──
 const DEMO_HINTS = [
-  { label: 'Admin Portal',        username: 'mulugeta.ababi', password: 'FanosAdmin2026!',  role: 'admin',    color: '#8b5cf6' },
-  { label: 'Security Operations', username: 'soc.analyst',   password: 'SocAnalyst2026!',  role: 'analyst',  color: '#00c8ff' },
-  { label: 'System Admin',        username: 'fanos ai',       password: 'Fanos4561644@',    role: 'admin',    color: '#00e5a0' },
+  { label: 'Customer Portal',     username: 'customer.demo',   password: 'CustomerDemo2026!', role: 'customer', color: '#00e5a0' },
+  { label: 'Admin Portal',        username: 'mulugeta.ababi',  password: 'FanosAdmin2026!',  role: 'admin',    color: '#8b5cf6' },
+  { label: 'Security Operations', username: 'soc.analyst',     password: 'SocAnalyst2026!',  role: 'analyst',  color: '#00c8ff' },
+  { label: 'System Admin',        username: 'fanos ai',        password: 'Fanos4561644@',    role: 'admin',    color: '#f59e0b' },
 ]
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [username,     setUsername]     = useState('')
   const [password,     setPassword]     = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error,        setError]        = useState('')
+  const [successMsg,   setSuccessMsg]   = useState('')
   const [loading,      setLoading]      = useState(false)
   const [showHints,    setShowHints]    = useState(true)
+
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMsg(location.state.message)
+    }
+    if (location.state?.username) {
+      setUsername(location.state.username)
+    }
+  }, [location.state])
 
   function fillDemo(u: string, p: string) {
     setUsername(u)
     setPassword(p)
     setError('')
+    setSuccessMsg('')
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setSuccessMsg('')
 
     if (!username.trim() || !password) {
-      setError('Username and password are required.')
+      setError('Email or username and password are required.')
       return
     }
 
@@ -58,12 +73,15 @@ export default function LoginPage() {
       localStorage.setItem('fanos_token', res.access_token)
       localStorage.setItem('fanos_user', JSON.stringify(res.user))
 
-      const userRole = res.user?.role || 'admin'
+      // Trigger storage event for same-window context synchronization
+      window.dispatchEvent(new Event('storage'))
+
+      const userRole = res.user?.role || 'customer'
       const destination = ROLE_HOME[userRole] ?? '/dashboard'
       navigate(destination, { replace: true })
     } catch (err: any) {
       const detail = err.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'Invalid username or password. Please verify credentials.')
+      setError(typeof detail === 'string' ? detail : 'Invalid username/email or password. Please verify credentials.')
     } finally {
       setLoading(false)
     }
@@ -79,21 +97,8 @@ export default function LoginPage() {
       >
         <div>
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#0a3d62,#1565c0)', border: '1px solid rgba(0,200,255,0.4)' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L4 6.5V12c0 5 3.58 9.6 8 10.93C16.42 21.6 20 17 20 12V6.5L12 2Z"
-                  stroke="#00c8ff" strokeWidth="1.5" strokeLinejoin="round" fill="rgba(0,200,255,0.08)" />
-                <path d="M9 12l2.5 2.5L15 9" stroke="#00e5a0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-[16px] font-bold tracking-wide">FANOS <span style={{ color: '#00c8ff' }}>AI</span></div>
-              <div className="text-[10px] tracking-[1.5px] uppercase" style={{ color: '#00c8ff' }}>AI Cyber Defense</div>
-            </div>
+          <div className="mb-12">
+            <FanosLogo size={46} subtitle="AI CYBER DEFENSE" subtitleClass="text-cyan-400" />
           </div>
 
           <div className="mb-2 text-[11px] font-semibold tracking-[1.5px] uppercase" style={{ color: '#00c8ff' }}>
@@ -142,12 +147,8 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
 
           {/* Logo (mobile only) */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#0a3d62,#1565c0)', border: '1px solid rgba(0,200,255,0.4)' }}>
-              <Shield size={18} style={{ color: '#00c8ff' }} />
-            </div>
-            <div className="text-[16px] font-bold text-white">FANOS <span style={{ color: '#00c8ff' }}>AI</span></div>
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <FanosLogo size={40} subtitle="AI CYBER DEFENSE" subtitleClass="text-cyan-400" />
           </div>
 
           {/* Heading */}
@@ -206,6 +207,15 @@ export default function LoginPage() {
           <div className="rounded-xl p-8"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+
+              {/* Success from Registration */}
+              {successMsg && (
+                <div className="rounded-lg p-3 flex items-start gap-2"
+                  style={{ background: 'rgba(0,229,160,0.12)', border: '1px solid rgba(0,229,160,0.35)' }}>
+                  <CheckCircle2 size={16} style={{ color: '#00e5a0', flexShrink: 0, marginTop: 2 }} />
+                  <p className="text-[12px] font-medium" style={{ color: '#a7f3d0' }}>{successMsg}</p>
+                </div>
+              )}
 
               {/* Error */}
               {error && (

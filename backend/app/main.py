@@ -81,6 +81,8 @@ app.add_middleware(
 
 # ── Routes ─────────────────────────────────────────────────────
 app.include_router(api_router, prefix=settings.API_PREFIX)
+if settings.API_PREFIX != "/api":
+    app.include_router(api_router, prefix="/api")
 app.include_router(waf_api_router, prefix="/waf-api", tags=["WAF Direct API"])
 
 

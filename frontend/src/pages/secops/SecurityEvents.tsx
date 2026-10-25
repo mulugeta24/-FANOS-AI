@@ -222,25 +222,26 @@ export default function SecurityEvents() {
       }
     >
       {/* Filter bar */}
-      <div className="fanos-card p-3 flex items-center gap-2.5 flex-wrap">
-        <Search size={13} className="text-fanos-dim flex-shrink-0" />
+      <div className="fanos-card p-3.5 flex items-center gap-3 flex-wrap">
+        <Search size={14} className="text-sky-400 flex-shrink-0" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search events, IPs, paths, Request IDs…"
-          className="flex-1 min-w-[150px] bg-transparent border-none outline-none text-[12px] text-fanos-text placeholder:text-fanos-dim"
+          className="flex-1 min-w-[160px] bg-transparent border-none outline-none text-[12.5px] text-white placeholder:text-slate-500 font-medium"
         />
-        <div className="flex items-center gap-1 flex-wrap">
-          <Filter size={10} className="text-fanos-dim" />
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Filter size={11} className="text-slate-400 mr-1" />
           {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map((f) => (
             <button
               key={f}
               onClick={() => setSev(f)}
-              className="text-[9px] font-semibold px-2 py-0.5 rounded transition-all"
+              className="text-[9.5px] font-mono font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer"
               style={{
-                background: sev === f ? 'rgba(0,200,255,0.15)' : 'rgba(255,255,255,0.04)',
-                color: sev === f ? '#00c8ff' : '#6b7280',
-                border: `1px solid ${sev === f ? 'rgba(0,200,255,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                background: sev === f ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.03)',
+                color: sev === f ? '#38bdf8' : '#94a3b8',
+                border: `1px solid ${sev === f ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                boxShadow: sev === f ? '0 0 10px rgba(56,189,248,0.2)' : 'none',
               }}
             >
               {f}
@@ -252,22 +253,22 @@ export default function SecurityEvents() {
       <div className="fanos-card">
         <div className="fanos-panel-header">
           <div className="fanos-panel-title">
-            <Zap size={13} className="text-fanos-accent" />
-            Live Event Stream
+            <Zap size={14} className="text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+            <span>Live Event Stream</span>
           </div>
-          <span className="text-[10px] text-fanos-dim">
+          <span className="text-[11px] font-mono text-slate-400">
             {filtered.length} of {liveEvents.length} events
           </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-black/10 border-b border-white/[0.05]">
+              <tr className="bg-[#080d19]/90 border-b border-white/[0.08]">
                 {['Time', 'Request ID', 'Severity', 'Attack Type', 'Source IP', 'Target', 'Sensor', 'Confidence', 'Risk', 'Status'].map(
                   (h) => (
                     <th
                       key={h}
-                      className="px-3 py-2.5 text-left text-[9px] font-bold tracking-[0.7px] uppercase text-fanos-dim whitespace-nowrap"
+                      className="px-3.5 py-3 text-left text-[9.5px] font-bold tracking-[0.8px] uppercase text-slate-400 whitespace-nowrap"
                     >
                       {h}
                     </th>
@@ -281,50 +282,50 @@ export default function SecurityEvents() {
                 const st = statusStyle[e.status] ?? { bg: 'rgba(255,255,255,0.04)', color: '#6b7280' }
                 const sc = sensorColor[e.sensor] ?? '#6b7280'
                 return (
-                  <tr key={e.id} className="hover:bg-white/[0.018] transition-colors">
-                    <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-dim whitespace-nowrap">
+                  <tr key={e.id} className="hover:bg-white/[0.04] transition-colors group">
+                    <td className="px-3.5 py-2.5 font-mono text-[10.5px] text-slate-400 whitespace-nowrap">
                       {e.time}
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-[10px] text-cyan-400 font-semibold whitespace-nowrap">
+                    <td className="px-3.5 py-2.5 font-mono text-[10.5px] text-cyan-400 font-semibold whitespace-nowrap">
                       {e.requestId}
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3.5 py-2.5">
                       <span
-                        className="text-[9px] font-bold px-2 py-0.5 rounded"
-                        style={{ background: sv.bg, color: sv.color, border: `1px solid ${sv.color}30` }}
+                        className="text-[9.5px] font-mono font-bold px-2 py-0.5 rounded"
+                        style={{ background: sv.bg, color: sv.color, border: `1px solid ${sv.color}35` }}
                       >
                         {e.sev}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5 text-[11px] text-fanos-text font-medium">{e.type}</td>
-                    <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-muted">{e.src}</td>
-                    <td className="px-3 py-2.5 font-mono text-[10px] text-fanos-dim max-w-xs truncate">{e.target}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3.5 py-2.5 text-[11.5px] text-white font-medium">{e.type}</td>
+                    <td className="px-3.5 py-2.5 font-mono text-[11px] text-slate-300">{e.src}</td>
+                    <td className="px-3.5 py-2.5 font-mono text-[11px] text-sky-300/90 max-w-xs truncate">{e.target}</td>
+                    <td className="px-3.5 py-2.5">
                       <span
-                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}25` }}
+                        className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded"
+                        style={{ background: `${sc}18`, color: sc, border: `1px solid ${sc}35` }}
                       >
                         {e.sensor}
                       </span>
                     </td>
                     <td
-                      className="px-3 py-2.5 text-[10px] font-mono"
-                      style={{ color: e.confidence >= 95 ? '#00e5a0' : e.confidence >= 85 ? '#f59e0b' : '#6b7280' }}
+                      className="px-3.5 py-2.5 text-[10.5px] font-mono"
+                      style={{ color: e.confidence >= 95 ? '#00e5a0' : e.confidence >= 85 ? '#f59e0b' : '#94a3b8' }}
                     >
                       {e.confidence.toFixed(1)}%
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3.5 py-2.5">
                       <span
-                        className="text-[11px] font-bold"
-                        style={{ color: e.risk >= 90 ? '#ef4444' : e.risk >= 70 ? '#f59e0b' : e.risk > 0 ? '#00c8ff' : '#6b7280' }}
+                        className="text-[11.5px] font-bold font-mono"
+                        style={{ color: e.risk >= 90 ? '#ef4444' : e.risk >= 70 ? '#f59e0b' : e.risk > 0 ? '#00c8ff' : '#64748b' }}
                       >
                         {e.risk || '—'}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3.5 py-2.5">
                       <span
-                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{ background: st.bg, color: st.color, border: `1px solid ${st.color}25` }}
+                        className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded"
+                        style={{ background: st.bg, color: st.color, border: `1px solid ${st.color}30` }}
                       >
                         {e.status}
                       </span>

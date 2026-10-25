@@ -8,6 +8,7 @@ import RequireAuth        from '@/components/layout/RequireAuth'
 
 // ── Public pages ──────────────────────────────────────────────
 import Dashboard          from '@/pages/Dashboard'
+import CustomerPortal    from '@/components/customer/CustomerPortal'
 import LandingPage        from '@/pages/LandingPage'
 import AboutPage          from '@/pages/AboutPage'
 import ContactPage        from '@/pages/ContactPage'
@@ -17,6 +18,16 @@ import RegisterPage       from '@/pages/RegisterPage'
 import LoginPage          from '@/pages/LoginPage'
 import LoginHelpPage      from '@/pages/LoginHelpPage'
 import SecurityGuidesPage from '@/pages/SecurityGuidesPage'
+
+// ── Customer Security Services & Dashboard Workflow ──────────
+import { CustomerDashboard } from '@/pages/customer-services/CustomerDashboard'
+import { CustomerWafPage } from '@/pages/customer-services/CustomerWafPage'
+import { CustomerIdsPage } from '@/pages/customer-services/CustomerIdsPage'
+import { CustomerScannerPage } from '@/pages/customer-services/CustomerScannerPage'
+import { CustomerUrlDetectionPage } from '@/pages/customer-services/CustomerUrlDetectionPage'
+import { CustomerIncidentResponsePage } from '@/pages/customer-services/CustomerIncidentResponsePage'
+import ServiceRouteGuard from '@/components/customer/ServiceRouteGuard'
+import ServiceRequestFlowPage from '@/pages/customer-services/ServiceRequestFlowPage'
 
 // ── Customer SOC — Detection ──────────────────────────────────
 import NetworkIDS         from '@/pages/detection/NetworkIDS'
@@ -155,6 +166,34 @@ export default function App() {
       <Route element={<AppLayout />}>
         {/* ── Overview ─────────────────────────── */}
         <Route path="/dashboard"  element={<Dashboard />} />
+
+        {/* ── Customer Security Services & Dashboard Workflow ── */}
+        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        <Route path="/customer/services"  element={<CustomerDashboard />} />
+
+        {/* Dedicated Service Request Workflow Routes */}
+        <Route path="/customer/services/waf/request" element={<ServiceRequestFlowPage forcedServiceId="waf" />} />
+        <Route path="/customer/services/ids/request" element={<ServiceRequestFlowPage forcedServiceId="ids" />} />
+        <Route path="/customer/services/vulnerability-scanner/request" element={<ServiceRequestFlowPage forcedServiceId="vulnerability-scanner" />} />
+        <Route path="/customer/services/url-detection/request" element={<ServiceRequestFlowPage forcedServiceId="url-detection" />} />
+        <Route path="/customer/services/incident-response/request" element={<ServiceRequestFlowPage forcedServiceId="incident-response" />} />
+        <Route path="/customer/services/:serviceType/request" element={<ServiceRequestFlowPage />} />
+
+        {/* Dedicated Service Portals (Protected with ServiceRouteGuard) */}
+        <Route path="/customer/services/waf" element={<ServiceRouteGuard serviceId="waf"><CustomerWafPage /></ServiceRouteGuard>} />
+        <Route path="/customer/services/ids" element={<ServiceRouteGuard serviceId="ids"><CustomerIdsPage /></ServiceRouteGuard>} />
+        <Route path="/customer/services/vulnerability-scanner" element={<ServiceRouteGuard serviceId="vulnerability-scanner"><CustomerScannerPage /></ServiceRouteGuard>} />
+        <Route path="/customer/services/url-detection" element={<ServiceRouteGuard serviceId="url-detection"><CustomerUrlDetectionPage /></ServiceRouteGuard>} />
+        <Route path="/customer/services/incident-response" element={<ServiceRouteGuard serviceId="incident-response"><CustomerIncidentResponsePage /></ServiceRouteGuard>} />
+
+        {/* ── Customer Portal Routes ────────────── */}
+        <Route path="/customer"                  element={<Navigate to="/customer/dashboard" replace />} />
+        <Route path="/customer/overview"         element={<Navigate to="/customer/dashboard" replace />} />
+        <Route path="/customer/service-requests" element={<CustomerPortal initialTab="requests" />} />
+        <Route path="/customer/requests"         element={<CustomerPortal initialTab="requests" />} />
+        <Route path="/customer/assets"           element={<CustomerPortal initialTab="assets" />} />
+        <Route path="/customer/reports"          element={<CustomerPortal initialTab="reports" />} />
+        <Route path="/customer/profile"          element={<CustomerPortal initialTab="profile" />} />
 
         {/* ── Detection ────────────────────────── */}
         <Route path="/detection/network"     element={<NetworkIDS />} />

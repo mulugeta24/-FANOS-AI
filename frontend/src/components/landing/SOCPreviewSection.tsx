@@ -83,12 +83,7 @@ export default function SOCPreviewSection() {
           <div className="flex items-center justify-between px-6 py-4"
             style={{ background: 'rgba(8,12,20,0.95)', borderBottom: '1px solid #1E3047' }}>
             <div className="flex items-center gap-3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L4 6.5V12c0 5 3.58 9.6 8 10.93C16.42 21.6 20 17 20 12V6.5L12 2Z"
-                  stroke="#22D3EE" strokeWidth="1.5" fill="rgba(34,211,238,0.08)"/>
-                <path d="M9 12l2.5 2.5L15 9" stroke="#10B981" strokeWidth="1.8"
-                  strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <img src="/images/fanos-shield.png" alt="FANOS AI" className="w-5 h-5 object-contain drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
               <span className="text-[13px] font-bold text-white">FANOS AI — Security Operations Center</span>
               <span className="text-[9px] font-bold px-2 py-0.5 rounded"
                 style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.2)' }}>

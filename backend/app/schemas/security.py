@@ -249,6 +249,48 @@ class URIAssessmentResult(BaseModel):
 
 
 # ──────────────────────────────────────────────
+# Assets
+# ──────────────────────────────────────────────
+class AssetCreate(BaseModel):
+    organization_id: uuid.UUID
+    name: str = Field(..., min_length=2, max_length=256)
+    asset_type: str = Field(default="OTHER")
+    ip_address: str = Field(...)
+    hostname: Optional[str] = None
+    description: Optional[str] = None
+    environment: str = Field(default="LAB")
+    sensor_id: Optional[str] = None
+
+
+class AssetUpdate(BaseModel):
+    name: Optional[str] = None
+    asset_type: Optional[str] = None
+    ip_address: Optional[str] = None
+    hostname: Optional[str] = None
+    description: Optional[str] = None
+    environment: Optional[str] = None
+    sensor_id: Optional[str] = None
+
+
+class AssetOut(BaseModel):
+    id: uuid.UUID
+    organization_id: Optional[uuid.UUID] = None
+    name: str
+    asset_type: str
+    ip_address: str
+    hostname: Optional[str] = None
+    description: Optional[str] = None
+    environment: str
+    status: str
+    monitoring_enabled: bool
+    sensor_id: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ──────────────────────────────────────────────
 # Auth
 # ──────────────────────────────────────────────
 class LoginRequest(BaseModel):
@@ -261,3 +303,4 @@ class TokenResponse(BaseModel):
     token_type:   str = "bearer"
     expires_in:   int
     user:         Optional[dict] = None
+

@@ -2,6 +2,7 @@
  * Admin Portal — Overview
  * Business / platform management dashboard.
  */
+import { useState, useEffect } from 'react'
 import {
   Building2, Users, ClipboardList, CheckSquare,
   Rocket, Layers, TrendingUp, AlertCircle,
@@ -9,6 +10,7 @@ import {
   XCircle, Package,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { getAdminAllRequests } from '@/lib/api'
 
 // ── KPI Card ──────────────────────────────────────────────────
 function KpiCard({
@@ -100,6 +102,29 @@ function CustomerRow({
 
 export default function AdminOverview() {
   const navigate = useNavigate()
+  const [counts, setCounts] = useState({ requests: 3, approvals: 5 })
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const reqs = await getAdminAllRequests()
+        const realPending = reqs.filter(r => (r.status || '').toLowerCase() === 'pending').length
+        let platformPending = 5
+        try {
+          const saved = localStorage.getItem('fanos_platform_approval_decisions')
+          const resolvedPlatform = saved ? Object.keys(JSON.parse(saved)).length : 0
+          platformPending = Math.max(0, 5 - resolvedPlatform)
+        } catch {}
+        setCounts({
+          requests: realPending,
+          approvals: realPending + platformPending,
+        })
+      } catch {}
+    }
+    fetchCounts()
+    const timer = setInterval(fetchCounts, 8000)
+    return () => clearInterval(timer)
+  }, [])
 
   return (
     <div className="px-5 py-5 flex flex-col gap-5">
@@ -130,8 +155,8 @@ export default function AdminOverview() {
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
         <KpiCard label="Organizations"    value={8}   sub="+1 this month"  icon={<Building2 size={16}/>}    color="#8b5cf6" href="/admin-portal/organizations" />
         <KpiCard label="Customers"        value={23}  sub="18 active"      icon={<Users size={16}/>}         color="#00c8ff" href="/admin-portal/customers" />
-        <KpiCard label="Pending Requests" value={3}   sub="2 urgent"       icon={<ClipboardList size={16}/>} color="#f59e0b" href="/admin-portal/requests" />
-        <KpiCard label="Pending Approvals"value={5}   sub="Awaiting review"icon={<CheckSquare size={16}/>}   color="#f59e0b" href="/admin-portal/approvals" />
+        <KpiCard label="Pending Requests" value={counts.requests} sub="Awaiting review" icon={<ClipboardList size={16}/>} color="#f59e0b" href="/admin-portal/requests" />
+        <KpiCard label="Pending Approvals"value={counts.approvals} sub="Awaiting review" icon={<CheckSquare size={16}/>}   color="#f59e0b" href="/admin-portal/approvals" />
         <KpiCard label="Active Deployments"value={14} sub="2 in progress"  icon={<Rocket size={16}/>}        color="#00e5a0" href="/admin-portal/deployments" />
         <KpiCard label="Active Services"  value={6}   sub="All healthy"    icon={<Layers size={16}/>}        color="#00c8ff" href="/admin-portal/services" />
       </div>

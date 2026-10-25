@@ -5,131 +5,257 @@
 @layer base {
   :root {
     --background: 222 47% 5%;
-    --foreground: 213 31% 91%;
-    --muted: 215 28% 12%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 195 100% 50%;
-    --accent-foreground: 222 47% 5%;
-    --primary: 195 100% 50%;
-    --primary-foreground: 222 47% 5%;
-    --secondary: 215 28% 12%;
-    --secondary-foreground: 213 31% 91%;
-    --border: 215 28% 14%;
-    --input: 215 28% 14%;
-    --ring: 195 100% 50%;
-    --radius: 0.5rem;
+    --foreground: 210 40% 98%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 199 89% 48%;
+    --radius: 0.75rem;
   }
 }
 
 @layer base {
   * { @apply border-border; }
   body {
-    @apply bg-fanos-bg text-fanos-text font-sans;
+    @apply bg-fanos-bg text-fanos-text font-sans antialiased;
+    background-color: #060911;
+    color: #f1f5f9;
     font-size: 13px;
+    letter-spacing: -0.01em;
   }
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-fanos-card rounded-full; }
-  ::-webkit-scrollbar-thumb:hover { background: #1e3352; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #070b14; }
+  ::-webkit-scrollbar-thumb { 
+    background: #1e293b; 
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { 
+    background: #334155; 
+  }
 }
 
 @layer components {
-  /* Severity badges */
-  .badge-critical {
-    @apply inline-flex items-center justify-center px-2 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase;
-    background: rgba(239,68,68,0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239,68,68,0.3);
-  }
-  .badge-high {
-    @apply inline-flex items-center justify-center px-2 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase;
-    background: rgba(249,115,22,0.15);
-    color: #f97316;
-    border: 1px solid rgba(249,115,22,0.3);
-  }
-  .badge-medium {
-    @apply inline-flex items-center justify-center px-2 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase;
-    background: rgba(245,158,11,0.15);
-    color: #f59e0b;
-    border: 1px solid rgba(245,158,11,0.3);
-  }
-  .badge-low {
-    @apply inline-flex items-center justify-center px-2 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase;
-    background: rgba(59,130,246,0.12);
-    color: #3b82f6;
-    border: 1px solid rgba(59,130,246,0.3);
-  }
-  .badge-info {
-    @apply inline-flex items-center justify-center px-2 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase;
-    background: rgba(139,92,246,0.12);
-    color: #8b5cf6;
-    border: 1px solid rgba(139,92,246,0.3);
-  }
-
-  /* Status badges */
-  .status-blocked {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide;
-    background: rgba(0,229,160,0.1);
-    color: #00e5a0;
-    border: 1px solid rgba(0,229,160,0.25);
-  }
-  .status-investigating {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide;
-    background: rgba(249,115,22,0.12);
-    color: #f97316;
-    border: 1px solid rgba(249,115,22,0.25);
-  }
-  .status-contained {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide;
-    background: rgba(59,130,246,0.12);
-    color: #3b82f6;
-    border: 1px solid rgba(59,130,246,0.25);
-  }
-  .status-monitored {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide;
-    background: rgba(245,158,11,0.12);
-    color: #f59e0b;
-    border: 1px solid rgba(245,158,11,0.25);
-  }
-  .status-alert {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide;
-    background: rgba(0,200,255,0.1);
-    color: #00c8ff;
-    border: 1px solid rgba(0,200,255,0.25);
-  }
-
-  /* Panel card */
+  /* Enterprise Clean Cards & Panels — Dark Cyber Glassmorphism */
   .fanos-card {
-    @apply bg-fanos-card rounded-[10px] border border-white/[0.06] overflow-hidden flex flex-col;
+    @apply rounded-xl border border-white/[0.08] overflow-hidden flex flex-col transition-all duration-200 text-slate-100;
+    background: linear-gradient(135deg, rgba(13, 21, 37, 0.85) 0%, rgba(9, 15, 26, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  }
+  
+  .fanos-card:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  }
+
+  .fanos-card-glow {
+    @apply fanos-card;
+    position: relative;
   }
 
   .fanos-panel-header {
-    @apply flex items-center gap-2 px-4 py-3 border-b border-white/[0.05];
+    @apply flex items-center gap-2 px-4 py-3 border-b border-white/[0.08];
+    background: rgba(15, 23, 42, 0.65);
   }
 
   .fanos-panel-title {
-    @apply flex-1 flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-fanos-muted;
+    @apply flex-1 flex items-center gap-2 text-[12px] font-bold tracking-wide text-white;
   }
 
-  /* Btn */
+  /* Refined Modern Cyber SOC Buttons */
   .fanos-btn {
-    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wide cursor-pointer transition-all duration-150;
-    background: rgba(0,200,255,0.1);
-    color: #00c8ff;
-    border: 1px solid rgba(0,200,255,0.25);
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide cursor-pointer transition-all duration-150 select-none;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
   }
-  .fanos-btn:hover { background: rgba(0,200,255,0.2); }
+  .fanos-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.3);
+  }
+  .fanos-btn:active {
+    transform: scale(0.98);
+  }
 
-  /* Accent glow dot */
+  .fanos-btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide cursor-pointer transition-all duration-150 select-none text-white;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 12px rgba(2, 132, 199, 0.35);
+  }
+  .fanos-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1, #075985);
+    box-shadow: 0 0 16px rgba(2, 132, 199, 0.5);
+  }
+
+  /* Sleek Cyber Badges — Dark Glassmorphic */
+  .badge-critical {
+    @apply inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase font-mono;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+  }
+  .badge-high {
+    @apply inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase font-mono;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+  }
+  .badge-medium {
+    @apply inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase font-mono;
+    background: rgba(0, 200, 255, 0.12);
+    color: #00c8ff;
+    border: 1px solid rgba(0, 200, 255, 0.30);
+  }
+  .badge-low {
+    @apply inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase font-mono;
+    background: rgba(107, 114, 128, 0.15);
+    color: #9ca3af;
+    border: 1px solid rgba(107, 114, 128, 0.25);
+  }
+  .badge-info {
+    @apply inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase font-mono;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+  }
+
+  /* Status Badges */
+  .status-blocked {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider font-mono;
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .status-investigating {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider font-mono;
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  .status-contained {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider font-mono;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .status-monitored {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider font-mono;
+    background: rgba(0, 200, 255, 0.12);
+    color: #00c8ff;
+    border: 1px solid rgba(0, 200, 255, 0.3);
+  }
+  .status-alert {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider font-mono;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+  }
+
+  /* Indicator Dots */
   .dot-green {
-    @apply w-1.5 h-1.5 rounded-full bg-fanos-green animate-pulse-glow;
+    @apply w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-glow;
   }
   .dot-accent {
-    @apply w-1.5 h-1.5 rounded-full bg-fanos-accent animate-pulse-accent;
+    @apply w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse-accent;
   }
   .dot-red {
-    @apply w-1.5 h-1.5 rounded-full bg-fanos-red animate-pulse-red;
+    @apply w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse-red;
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     NEXT-GEN MODERN CYBER OPS DESIGN SYSTEM
+     ═══════════════════════════════════════════════════════════ */
+  .cyber-grid-bg {
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 60%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
+  }
+
+  .cyber-dots-bg {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Ultra-Crisp Glassmorphism Cards */
+  .cyber-card {
+    @apply rounded-2xl border border-white/[0.08] relative overflow-hidden transition-all duration-300;
+    background: linear-gradient(145deg, rgba(13, 20, 36, 0.85) 0%, rgba(8, 13, 24, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 
+      0 10px 30px -5px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  }
+
+  .cyber-card:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 
+      0 14px 40px -5px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(255, 255, 255, 0.09) inset;
+  }
+
+  .cyber-card-glow-cyan::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  }
+
+  .cyber-card-glow-emerald::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #10b981, transparent);
+  }
+
+  .cyber-card-glow-purple::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #a855f7, transparent);
+  }
+
+  .cyber-card-glow-rose::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #f43f5e, transparent);
+  }
+
+  /* Monospace Metrics Number Styling */
+  .metric-mono {
+    font-feature-settings: 'tnum', 'zero';
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+}
+
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-radar {
+  animation: radar-sweep 4s linear infinite;
 }
 
 /* ═══════════════════════════════════════════════════════════

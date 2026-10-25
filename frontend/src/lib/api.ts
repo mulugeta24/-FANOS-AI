@@ -388,3 +388,376 @@ export const downloadScannerJsonReport = async (jobId: string, targetDomain?: st
   document.body.removeChild(link)
   window.URL.revokeObjectURL(downloadUrl)
 }
+
+// ──────────────────────────────────────────────
+// Customer Portal & Services
+// ──────────────────────────────────────────────
+export interface CustomerRegisterPayload {
+  full_name: string
+  username: string
+  email: string
+  password: string
+  confirm_password?: string
+  phone?: string
+  organization_name?: string
+  organization_type?: string
+  role?: string
+}
+
+export interface CustomerUser {
+  id?: string
+  username: string
+  full_name: string
+  email: string
+  role: string
+  organization_name?: string
+  organization_type?: string
+  phone?: string
+  created_at?: string
+  last_login?: string
+}
+
+export interface CustomerAsset {
+  id: string
+  name: string
+  asset_type: string
+  ip_address: string
+  hostname?: string
+  target_url?: string
+  environment: string
+  status: string
+  monitoring_enabled: boolean
+  service_type?: string
+  description?: string
+  created_at: string
+}
+
+export interface ServiceRequestItem {
+  id: string
+  request_number: string
+  user_id?: string
+  username: string
+  customer_name?: string
+  customer_email?: string
+  organization_name?: string
+  organization_type?: string
+  service_type: string
+  service_category: string
+  asset_id?: string
+  asset_name?: string
+  target_spec?: string
+  priority: 'Low' | 'Medium' | 'High' | 'Critical'
+  status: 'Pending' | 'Approved' | 'In Progress' | 'Completed' | 'Rejected' | 'Cancelled'
+  request_type: string
+  description?: string
+  admin_notes?: string
+  assigned_to?: string
+  created_at: string
+  updated_at?: string
+  resolved_at?: string
+}
+
+export interface ServiceCatalogItem {
+  id: string
+  name: string
+  category: string
+  headline: string
+  description: string
+  features: string[]
+  status: string
+  badge: string
+  icon: string
+  active: boolean
+}
+
+export interface CustomerDashboardStats {
+  total_requests: number
+  pending_requests: number
+  approved_requests: number
+  rejected_requests: number
+  in_progress_requests: number
+  completed_requests: number
+  active_services_count: number
+  registered_assets_count: number
+  recent_activity: Array<{
+    id: string
+    type: 'REQUEST' | 'ASSET'
+    title: string
+    detail: string
+    status: string
+    timestamp: string
+  }>
+  available_services: ServiceCatalogItem[]
+}
+
+export interface CustomerReport {
+  id: string
+  title: string
+  type: string
+  target?: string
+  status: string
+  format: string
+  findings_count?: number
+  risk_score?: number
+  created_at: string
+  size?: string
+  download_url?: string
+}
+
+export const registerCustomerApi = (payload: CustomerRegisterPayload): Promise<CustomerUser> =>
+  client.post('/auth/register', payload).then((r) => r.data)
+
+export const getCustomerDashboardStats = (): Promise<CustomerDashboardStats> =>
+  client.get('/customer/dashboard-stats').then((r) => r.data)
+
+export const getSecurityServices = (): Promise<ServiceCatalogItem[]> =>
+  client.get('/customer/services').then((r) => r.data)
+
+export const getCustomerServiceRequests = (status?: string): Promise<ServiceRequestItem[]> =>
+  client.get(`/customer/service-requests${status ? `?status=${encodeURIComponent(status)}` : ''}`).then((r) => r.data)
+
+export const createServiceRequest = (payload: {
+  service_type: string
+  service_category?: string
+  asset_id?: string
+  asset_name?: string
+  target_spec?: string
+  priority?: string
+  request_type?: string
+  description?: string
+}): Promise<ServiceRequestItem> =>
+  client.post('/customer/service-requests', payload).then((r) => r.data)
+
+export const cancelServiceRequest = (requestId: string): Promise<ServiceRequestItem> =>
+  client.post(`/customer/service-requests/${requestId}/cancel`).then((r) => r.data)
+
+export const getCustomerAssets = (): Promise<CustomerAsset[]> =>
+  client.get('/customer/assets').then((r) => r.data)
+
+export const createCustomerAsset = (payload: {
+  name: string
+  asset_type: string
+  ip_address: string
+  hostname?: string
+  target_url?: string
+  environment?: string
+  service_type?: string
+  description?: string
+}): Promise<CustomerAsset> =>
+  client.post('/customer/assets', payload).then((r) => r.data)
+
+export const deleteCustomerAsset = (assetId: string): Promise<void> =>
+  client.delete(`/customer/assets/${assetId}`).then((r) => r.data)
+
+export const getCustomerReports = (): Promise<CustomerReport[]> =>
+  client.get('/customer/reports').then((r) => r.data)
+
+export const getCustomerProfile = (): Promise<CustomerUser> =>
+  client.get('/auth/me').then((r) => r.data)
+
+export const updateCustomerProfile = (payload: {
+  full_name?: string
+  phone?: string
+  organization_name?: string
+  organization_type?: string
+}): Promise<CustomerUser> =>
+  client.patch('/auth/profile', payload).then((r) => r.data)
+
+export const getAdminAllRequests = (): Promise<ServiceRequestItem[]> =>
+  client.get('/customer/admin/all-requests').then((r) => r.data)
+
+export const getAdminCustomers = (): Promise<any[]> =>
+  client.get('/customer/admin/customers').then((r) => r.data)
+
+export const getAdminCustomerDetail = (customerId: string): Promise<any> =>
+  client.get(`/customer/admin/customers/${encodeURIComponent(customerId)}`).then((r) => r.data)
+
+export const getCustomerMisconfigurations = (): Promise<any> =>
+  client.get('/customer/security-misconfigurations').then((r) => r.data)
+
+export const adminApproveRequest = (requestId: string, notes?: string): Promise<ServiceRequestItem> =>
+  client.post(`/customer/admin/requests/${requestId}/approve${notes ? `?notes=${encodeURIComponent(notes)}` : ''}`).then((r) => r.data)
+
+export const adminRejectRequest = (requestId: string, reason?: string): Promise<ServiceRequestItem> =>
+  client.post(`/customer/admin/requests/${requestId}/reject${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`).then((r) => r.data)
+
+export const adminUpdateNotes = (requestId: string, notes: string): Promise<ServiceRequestItem> =>
+  client.post(`/customer/admin/requests/${requestId}/notes?notes=${encodeURIComponent(notes)}`).then((r) => r.data)
+
+export const approveServiceRequest = adminApproveRequest
+export const rejectServiceRequest = adminRejectRequest
+
+// ──────────────────────────────────────────────
+// Service Authorizations & Dedicated Customer Service APIs
+// ──────────────────────────────────────────────
+export interface ServiceAuthorizationItem {
+  service_id: string
+  service_name: string
+  status: 'NOT_REQUESTED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  request_id?: string | null
+  request_number?: string | null
+  created_at?: string | null
+  resolved_at?: string | null
+  admin_notes?: string | null
+  target_spec?: string | null
+  asset_name?: string | null
+  environment?: string | null
+}
+
+export interface WafServiceRequestPayload {
+  website_name: string
+  domain_name: string
+  frontend_url: string
+  backend_app_url: string
+  backend_api_url?: string
+  environment?: string
+  protection_mode?: string
+  ip_address?: string
+  port?: string
+  web_type?: string
+  organization_name?: string
+  host?: string
+}
+
+export interface IdsServiceRequestPayload {
+  organization_name: string
+  network_name: string
+  network_cidr: string
+  sensor_name: string
+  sensor_ip: string
+  environment?: string
+  monitoring_description?: string
+}
+
+export interface ScannerServiceRequestPayload {
+  website_name: string
+  domain: string
+  target_url: string
+  application_name: string
+  environment?: string
+  backend_api_url?: string
+  authorized?: boolean
+}
+
+export interface UrlDetectionServiceRequestPayload {
+  organization_name?: string
+  target_domains: string
+  environment?: string
+  description?: string
+}
+
+export interface IncidentResponseServiceRequestPayload {
+  organization_name?: string
+  primary_contact?: string
+  critical_scope: string
+  environment?: string
+  description?: string
+}
+
+export const getServiceAuthorizations = (): Promise<{
+  authorizations: Record<string, ServiceAuthorizationItem>
+  list: ServiceAuthorizationItem[]
+}> => client.get('/customer/services/authorizations').then((r) => r.data)
+
+export const submitWafRequest = (payload: WafServiceRequestPayload): Promise<ServiceRequestItem> =>
+  client.post('/customer/services/waf/request', payload).then((r) => r.data)
+
+export const submitIdsRequest = (payload: IdsServiceRequestPayload): Promise<ServiceRequestItem> =>
+  client.post('/customer/services/ids/request', payload).then((r) => r.data)
+
+export const submitScannerRequest = (payload: ScannerServiceRequestPayload): Promise<ServiceRequestItem> =>
+  client.post('/customer/services/vulnerability-scanner/request', payload).then((r) => r.data)
+
+export const submitUrlDetectionRequest = (payload: UrlDetectionServiceRequestPayload): Promise<ServiceRequestItem> =>
+  client.post('/customer/services/url-detection/request', payload).then((r) => r.data)
+
+export const submitIncidentResponseRequest = (payload: IncidentResponseServiceRequestPayload): Promise<ServiceRequestItem> =>
+  client.post('/customer/services/incident-response/request', payload).then((r) => r.data)
+
+export const getWafServiceData = (): Promise<any> =>
+  client.get('/customer/services/waf/data').then((r) => r.data)
+
+export const getIdsServiceData = (): Promise<any> =>
+  client.get('/customer/services/ids/data').then((r) => r.data)
+
+export const getScannerServiceData = (): Promise<any> =>
+  client.get('/customer/services/vulnerability-scanner/data').then((r) => r.data)
+
+export const getUrlDetectionServiceData = (): Promise<any> =>
+  client.get('/customer/services/url-detection/data').then((r) => r.data)
+
+export const analyzeCustomerUrls = (urls: string[], description?: string): Promise<{ count: number; results: any[] }> =>
+  client.post('/customer/services/url-detection/analyze', { urls, description }).then((r) => r.data)
+
+export const getIncidentResponseServiceData = (): Promise<any> =>
+  client.get('/customer/services/incident-response/data').then((r) => r.data)
+
+export const submitCustomerIncident = (payload: {
+  title: string
+  description: string
+  affected_target: string
+  incident_type?: string
+  severity?: string
+  detection_time?: string
+}): Promise<any> =>
+  client.post('/customer/services/incident-response/submit', payload).then((r) => r.data)
+
+export interface CustomerTelemetryEventItem {
+  id: string
+  timestamp: string
+  attack_type: string
+  target: string
+  source_ip: string
+  severity: string
+  action: string
+  ai_confidence: number
+  risk_score: number
+}
+
+export interface CustomerDashboardTelemetryData {
+  is_approved: boolean
+  has_pending: boolean
+  active_asset_name?: string
+  frontend_domain?: string
+  backend_domain?: string
+  total_attacks_blocked: number
+  critical_threats: number
+  total_events_analyzed: number
+  ai_accuracy: number
+  events: CustomerTelemetryEventItem[]
+  attack_distribution: Array<{ name: string; value: number; percentage: number; color: string }>
+  traffic_trend: Array<{ time: string; requests: number; blocked: number }>
+  approved_assets: CustomerAsset[]
+  pending_assets: CustomerAsset[]
+  misconfigurations?: any[]
+}
+
+export interface UnifiedServiceRequestPayload {
+  full_name: string
+  work_email: string
+  company: string
+  phone?: string
+  role?: string
+  services: string[]
+  notes?: string
+  asset_name?: string
+  frontend_domain?: string
+  backend_domain?: string
+  environment?: string
+  protection_mode?: string
+  network_subnet?: string
+  scan_target?: string
+  ip_address?: string
+  port?: string
+  web_type?: string
+  organization_name?: string
+  host?: string
+}
+
+export const getCustomerDashboardTelemetry = (): Promise<CustomerDashboardTelemetryData> =>
+  client.get('/customer/dashboard/telemetry').then((r) => r.data)
+
+export const submitUnifiedServiceRequest = (payload: UnifiedServiceRequestPayload): Promise<any> =>
+  client.post('/customer/request-service', payload).then((r) => r.data)
+
+
